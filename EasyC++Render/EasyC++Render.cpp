@@ -20,18 +20,68 @@ typedef vector point;
 int CMID(int x, int min, int max) {
 	return (x < min) ? min : ((x > max) ? max : x);
 }
+//caculate the interpolation
+float interp(float x1, float x2, float t) {
+	return x1 + (x2 - x1)*t;
+}
+//caculate the length of vector
+float vector_length(vector v) {
+	float sq = v.x*v.x + v.y*v.y + v.z*v.z;
+	return (float)sqrt(sq);
+}
+//z=x+y
+vector vector_add(vector z, vector x, vector y) {
+	vector z;
+	z.x = x.x + y.x;
+	z.y = x.y + y.y;
+	z.z = x.z + y.z;
+	z.w = 1.0;
+	return z;
+}
+//z=x-y
+vector vector_sub(vector x, vector y) {
+	vector z;
+	z.x = x.x - y.x;
+	z.y = x.y - y.y;
+	z.z = x.z - y.z;
+	z.w = 1.0;
+	return z;
+}
+//dot product
+float vector_dot(vector z, vector x) {
+	return z.x*x.x + z.y*x.y + z.z*x.z;
+}
+//cross product
+vector vector_crossproduct(vector x, vector y) {
+	vector tmp;
+	tmp.x = x.y*y.z - x.z*y.y;
+	tmp.y = x.z*y.x - x.x*y.z;
+	tmp.z = x.x*y.y - x.y*y.x;
+	tmp.w = 1.0f;
+	return tmp;
+}
+// vector interpolation
+vector vector_interp(vector x, vector y, float t) {
+	vector tmp;
+	tmp.x = interp(x.x, y.x, t);
+	tmp.y = interp(x.y, y.y, t);
+	tmp.z = interp(x.z, y.z, t);
+	tmp.w = 1.0f;
+	return tmp;
+}
+//vector normalize
+void vector_normalize(vector& x) {
+	float length = vector_length(x);
+	if (length != 0) {
+		float tmp = 1.0f / length;
+		x.x *= tmp;
+		x.y *= tmp;
+		x.z *= tmp;
+	}
+}
 int main()
 {
     std::cout << "Hello World!\n"; 
 }
 
-// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
-// 调试程序: F5 或调试 >“开始调试”菜单
 
-// 入门提示: 
-//   1. 使用解决方案资源管理器窗口添加/管理文件
-//   2. 使用团队资源管理器窗口连接到源代码管理
-//   3. 使用输出窗口查看生成输出和其他消息
-//   4. 使用错误列表窗口查看错误
-//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
-//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
