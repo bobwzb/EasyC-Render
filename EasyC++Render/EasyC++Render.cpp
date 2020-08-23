@@ -3,7 +3,23 @@
 
 #include "pch.h"
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <assert.h>
 
+#include <windows.h>
+#include <tchar.h>
+
+//define some func for math
+typedef unsigned int IUINT32;
+typedef struct { float m[4][4]; } matrix;
+typedef struct { float x, y, z, w; } vector;
+typedef vector point;
+//find the mid of three value
+int CMID(int x, int min, int max) {
+	return (x < min) ? min : ((x > max) ? max : x);
+}
 int main()
 {
     std::cout << "Hello World!\n"; 
