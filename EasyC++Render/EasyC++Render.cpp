@@ -404,6 +404,42 @@ int trapezoid_init_triangle(trapezoid trap[], vertex p1,
 
 	return 2;
 }
+// caculate the left and right vertex of the trapezoid
+void trapezoid_edge_interp(trapezoid& trap, float y) {
+	float s1 = trap.left.v2.pos.y - trap.left.v1.pos.y;
+	float s2 = trap.right.v2.pos.y - trap.right.v1.pos.y;
+	float t1 = (y - trap.left.v1.pos.y) / s1;
+	float t2 = (y - trap.right.v1.pos.y) / s2;
+	trap.left.v=vertex_interp(trap.left.v1, trap.left.v2, t1);
+	trap.right.v=vertex_interp(trap.right.v1, trap.right.v2, t2);
+}
+
+// caculate the start point and step of the scanline
+void trapezoid_init_scan_line(trapezoid trap, scanline& scanline, int y) {
+	float width = trap.right.v.pos.x - trap.left.v.pos.x;
+	scanline.x = (int)(trap.left.v.pos.x + 0.5f);
+	scanline.w = (int)(trap.right.v.pos.x + 0.5f) - scanline.x;
+	scanline.y = y;
+	scanline.v = trap.left.v;
+	if (trap.left.v.pos.x >= trap.right.v.pos.x) scanline.w = 0;
+	scanline.step=vertex_division(trap.left.v, trap.right.v, width);
+}
+//render screen
+typedef struct {
+	transform transform;     
+	int width;                  
+	int height;                 
+	IUINT32 **framebuffer;      
+	float **zbuffer;            
+	IUINT32 **texture;          
+	int tex_width;              
+	int tex_height;             
+	float max_u;                // tex_width - 1
+	float max_v;                // tex_height - 1
+	int render_state;           
+	IUINT32 background;        
+	IUINT32 foreground;         
+}	device;
 int main()
 {
     std::cout << "Hello World!\n"; 
