@@ -30,7 +30,7 @@ float vector_length(vector v) {
 	return (float)sqrt(sq);
 }
 //z=x+y
-vector vector_add(vector z, vector x, vector y) {
+vector vector_add( vector x, vector y) {
 	vector z;
 	z.x = x.x + y.x;
 	z.y = x.y + y.y;
@@ -156,12 +156,10 @@ matrix matrix_translate(float x,float y,float z) {
 	return m;
 }
 //matrix set scale
-matrix matrix_set_scale(matrix& m, float x, float y, float z) {
-	matrix m;
+void matrix_set_scale(matrix& m, float x, float y, float z) {
 	m.m[0][0] = x;
 	m.m[1][1] = y;
 	m.m[2][2] = z;
-	return m;
 }
 //matrix rotation
 matrix matrix_set_rotate(float x, float y, float z, float theta) {
@@ -229,6 +227,182 @@ matrix matrix_set_perspective(float fovy, float aspect, float zn, float zf) {
 	m.m[3][2] = -zn * zf / (zf - zn);
 	m.m[2][3] = 1;
 	return m;
+}
+typedef struct {
+	matrix world;//world translation
+	matrix view; //camera tranlation
+	matrix projection;// projection translation
+	matrix trans; //transform = world * view * projection
+	float w, h; //size of the screen
+} transform;
+//transfrom update
+void transform_update(transform& t) {
+	matrix m;
+	m = matrix_mul(t.world, t.view);
+	t.trans= matrix_mul(m, t.projection);
+}
+//initalize tranform
+transform transform_init(int width, int height) {
+	transform t;
+	float aspect = (float)width / ((float)height);
+	t.world=matrix_identity();
+	t.view = matrix_identity();
+	t.projection=matrix_set_perspective(3.1415926f * 0.5f, aspect, 1.0f, 500.0f);
+	t.w = (float)width;
+	t.h = (float)height;
+	transform_update(t);
+	return t;
+}
+// project vector x
+vector transform_apply(transform t, vector x) {
+	vector y = matrix_apply(x, t.trans);
+	return y;
+}
+//check cvv for projection
+int transform_check_cvv(vector v) {
+	float w = v.w;
+	int check = 0;
+	if (v.z < 0.0f) check |= 1;
+	if (v.z > w) check |= 2;
+	if (v.x < -w) check |= 4;
+	if (v.x > w) check |= 8;
+	if (v.y < -w) check |= 16;
+	if (v.y > w) check |= 32;
+	return check;
+}
+//get sreen position
+vector transform_homogenize(transform t,  vector x) {
+	vector y;
+	float rhw = 1.0f / x.w;
+	y.x = (x.x * rhw + 1.0f) * t.w * 0.5f;
+	y.y = (1.0f - x.y * rhw) * t.h * 0.5f;
+	y.z = x.z * rhw;
+	y.w = 1.0f;
+	return y;
+}
+//Geometric calculation
+typedef struct { float r, g, b; } color;
+typedef struct { float u, v; } texcoord;
+typedef struct { point pos; texcoord tc; color color; float rhw; } vertex;
+
+typedef struct { vertex v, v1, v2; } edge;
+typedef struct { float top, bottom; edge left, right; } trapezoid;
+typedef struct { vertex v, step; int x, y, w; } scanline;
+//Reciprocal of Homogeneous
+void vertex_rhw_init(vertex& v) {
+	float rhw = 1.0f / v.pos.w;
+	v.rhw = rhw;
+	v.tc.u *= rhw;
+	v.tc.v *= rhw;
+	v.color.r *= rhw;
+	v.color.g *= rhw;
+	v.color.b *= rhw;
+}
+// vertex interp
+vertex vertex_interp(vertex x1, const vertex x2, float t) {
+	vertex y;
+	y.pos=vector_interp(x1.pos, x2.pos, t);
+	y.tc.u = interp(x1.tc.u, x2.tc.u, t);
+	y.tc.v = interp(x1.tc.v, x2.tc.v, t);
+	y.color.r = interp(x1.color.r, x2.color.r, t);
+	y.color.g = interp(x1.color.g, x2.color.g, t);
+	y.color.b = interp(x1.color.b, x2.color.b, t);
+	y.rhw = interp(x1.rhw, x2.rhw, t);
+	return y;
+}
+//vertex division
+vertex vertex_division(vertex x1, vertex x2, float w) {
+	vertex y;
+	float inv = 1.0f / w;
+	y.pos.x = (x2.pos.x - x1.pos.x) * inv;
+	y.pos.y = (x2.pos.y - x1.pos.y) * inv;
+	y.pos.z = (x2.pos.z - x1.pos.z) * inv;
+	y.pos.w = (x2.pos.w - x1.pos.w) * inv;
+	y.tc.u = (x2.tc.u - x1.tc.u) * inv;
+	y.tc.v = (x2.tc.v - x1.tc.v) * inv;
+	y.color.r = (x2.color.r - x1.color.r) * inv;
+	y.color.g = (x2.color.g - x1.color.g) * inv;
+	y.color.b = (x2.color.b - x1.color.b) * inv;
+	y.rhw = (x2.rhw - x1.rhw) * inv;
+	return y;
+}
+//vertex add
+void vertex_add(vertex& y, vertex x) {
+	y.pos.x += x.pos.x;
+	y.pos.y += x.pos.y;
+	y.pos.z += x.pos.z;
+	y.pos.w += x.pos.w;
+	y.rhw += x.rhw;
+	y.tc.u += x.tc.u;
+	y.tc.v += x.tc.v;
+	y.color.r += x.color.r;
+	y.color.g += x.color.g;
+	y.color.b += x.color.b;
+}
+// create trapezoid by triangle
+int trapezoid_init_triangle(trapezoid trap[], vertex p1,
+	vertex p2, vertex p3) {
+	vertex p;
+	float k, x;
+
+	if (p1.pos.y > p2.pos.y) p = p1, p1 = p2, p2 = p;
+	if (p1.pos.y > p3.pos.y) p = p1, p1 = p3, p3 = p;
+	if (p2.pos.y > p3.pos.y) p = p2, p2 = p3, p3 = p;
+	if (p1.pos.y == p2.pos.y && p1.pos.y == p3.pos.y) return 0;
+	if (p1.pos.x == p2.pos.x && p1.pos.x == p3.pos.x) return 0;
+
+	if (p1.pos.y == p2.pos.y) {	// triangle down
+		if (p1.pos.x > p2.pos.x) p = p1, p1 = p2, p2 = p;
+		trap[0].top = p1.pos.y;
+		trap[0].bottom = p3.pos.y;
+		trap[0].left.v1 = p1;
+		trap[0].left.v2 = p3;
+		trap[0].right.v1 = p2;
+		trap[0].right.v2 = p3;
+		return (trap[0].top < trap[0].bottom) ? 1 : 0;
+	}
+
+	if (p2.pos.y == p3.pos.y) {	// triangle up
+		if (p2.pos.x > p3.pos.x) p = p2, p2 = p3, p3 = p;
+		trap[0].top = p1.pos.y;
+		trap[0].bottom = p3.pos.y;
+		trap[0].left.v1 = p1;
+		trap[0].left.v2 = p2;
+		trap[0].right.v1 = p1;
+		trap[0].right.v2 = p3;
+		return (trap[0].top < trap[0].bottom) ? 1 : 0;
+	}
+
+	trap[0].top = p1.pos.y;
+	trap[0].bottom = p2.pos.y;
+	trap[1].top = p2.pos.y;
+	trap[1].bottom = p3.pos.y;
+
+	k = (p3.pos.y - p1.pos.y) / (p2.pos.y - p1.pos.y);
+	x = p1.pos.x + (p2.pos.x - p1.pos.x) * k;
+
+	if (x <= p3.pos.x) {		// triangle left
+		trap[0].left.v1 = p1;
+		trap[0].left.v2 = p2;
+		trap[0].right.v1 = p1;
+		trap[0].right.v2 = p3;
+		trap[1].left.v1 = p2;
+		trap[1].left.v2 = p3;
+		trap[1].right.v1 = p1;
+		trap[1].right.v2 = p3;
+	}
+	else {					// triangle right
+		trap[0].left.v1 = p1;
+		trap[0].left.v2 = p3;
+		trap[0].right.v1 = p1;
+		trap[0].right.v2 = p2;
+		trap[1].left.v1 = p1;
+		trap[1].left.v2 = p3;
+		trap[1].right.v1 = p2;
+		trap[1].right.v2 = p3;
+	}
+
+	return 2;
 }
 int main()
 {
