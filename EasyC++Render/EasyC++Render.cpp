@@ -576,6 +576,44 @@ IUINT32 device_texture_read(device device, float u, float v) {
 	y = CMID(y, 0, device.tex_height - 1);
 	return device.texture[y][x];
 }
+//draw canline
+void device_draw_scanline(device device, scanline scanline) {
+	IUINT32 *framebuffer = device.framebuffer[scanline.y];
+	float *zbuffer = device.zbuffer[scanline.y];
+	int x = scanline.x;
+	int w = scanline.w;
+	int width = device.width;
+	int render_state = device.render_state;
+	for (; w > 0; x++, w--) {
+		if (x >= 0 && x < width) {
+			float rhw = scanline.v.rhw;
+			if (rhw >= zbuffer[x]) {
+				float w = 1.0f / rhw;
+				zbuffer[x] = rhw;
+				if (render_state & RENDER_STATE_COLOR) {
+					float r = scanline.v.color.r * w;
+					float g = scanline.v.color.g * w;
+					float b = scanline.v.color.b * w;
+					int R = (int)(r * 255.0f);
+					int G = (int)(g * 255.0f);
+					int B = (int)(b * 255.0f);
+					R = CMID(R, 0, 255);
+					G = CMID(G, 0, 255);
+					B = CMID(B, 0, 255);
+					framebuffer[x] = (R << 16) | (G << 8) | (B);
+				}
+				if (render_state & RENDER_STATE_TEXTURE) {
+					float u = scanline.v.tc.u * w;
+					float v = scanline.v.tc.v * w;
+					IUINT32 cc = device_texture_read(device, u, v);
+					framebuffer[x] = cc;
+				}
+			}
+		}
+		vertex_add(scanline.v, scanline.step);
+		if (x >= width) break;
+	}
+}
 int main()
 {
     std::cout << "Hello World!\n"; 
