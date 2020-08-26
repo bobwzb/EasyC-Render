@@ -17,20 +17,18 @@ typedef struct { float m[4][4]; } matrix;
 typedef struct { float x, y, z, w; } vector;
 typedef vector point;
 //find the mid of three value
-int CMID(int x, int min, int max) {
-	return (x < min) ? min : ((x > max) ? max : x);
-}
+int CMID(int x, int min, int max) { return (x < min) ? min : ((x > max) ? max : x); }
 //caculate the interpolation
-float interp(float x1, float x2, float t) {
+float interp(float& x1, float& x2, float& t) {
 	return x1 + (x2 - x1)*t;
 }
 //caculate the length of vector
-float vector_length(vector v) {
+float vector_length(vector& v) {
 	float sq = v.x*v.x + v.y*v.y + v.z*v.z;
 	return (float)sqrt(sq);
 }
 //z=x+y
-vector vector_add( vector x, vector y) {
+vector vector_add( vector& x, vector& y) {
 	vector z;
 	z.x = x.x + y.x;
 	z.y = x.y + y.y;
@@ -39,7 +37,7 @@ vector vector_add( vector x, vector y) {
 	return z;
 }
 //z=x-y
-vector vector_sub(vector x, vector y) {
+vector vector_sub(vector& x, vector& y) {
 	vector z;
 	z.x = x.x - y.x;
 	z.y = x.y - y.y;
@@ -48,11 +46,11 @@ vector vector_sub(vector x, vector y) {
 	return z;
 }
 //dot product
-float vector_dot(vector z, vector x) {
+float vector_dot(vector& z, vector& x) {
 	return z.x*x.x + z.y*x.y + z.z*x.z;
 }
 //cross product
-vector vector_crossproduct(vector x, vector y) {
+vector vector_crossproduct(vector& x, vector& y) {
 	vector tmp;
 	tmp.x = x.y*y.z - x.z*y.y;
 	tmp.y = x.z*y.x - x.x*y.z;
@@ -61,7 +59,7 @@ vector vector_crossproduct(vector x, vector y) {
 	return tmp;
 }
 // vector interpolation
-vector vector_interp(vector x, vector y, float t) {
+vector vector_interp(vector& x, vector& y, float& t) {
 	vector tmp;
 	tmp.x = interp(x.x, y.x, t);
 	tmp.y = interp(x.y, y.y, t);
@@ -187,7 +185,7 @@ matrix matrix_set_rotate(float x, float y, float z, float theta) {
 	return m;
 }
 // set camera
-void matrix_set_lookat(matrix& m, const vector eye, const vector at, const vector up) {
+void matrix_set_lookat(matrix& m, vector eye, vector at, vector up) {
 	vector xaxis, yaxis, zaxis;
 
 	zaxis=vector_sub( at, eye);
@@ -297,7 +295,7 @@ void vertex_rhw_init(vertex& v) {
 	v.color.b *= rhw;
 }
 // vertex interp
-vertex vertex_interp(vertex x1, const vertex x2, float t) {
+vertex vertex_interp(vertex x1, vertex x2, float t) {
 	vertex y;
 	y.pos=vector_interp(x1.pos, x2.pos, t);
 	y.tc.u = interp(x1.tc.u, x2.tc.u, t);
@@ -325,17 +323,17 @@ vertex vertex_division(vertex x1, vertex x2, float w) {
 	return y;
 }
 //vertex add
-void vertex_add(vertex& y, vertex x) {
-	y.pos.x += x.pos.x;
-	y.pos.y += x.pos.y;
-	y.pos.z += x.pos.z;
-	y.pos.w += x.pos.w;
-	y.rhw += x.rhw;
-	y.tc.u += x.tc.u;
-	y.tc.v += x.tc.v;
-	y.color.r += x.color.r;
-	y.color.g += x.color.g;
-	y.color.b += x.color.b;
+void vertex_add(vertex *y, const vertex *x) {
+	y->pos.x += x->pos.x;
+	y->pos.y += x->pos.y;
+	y->pos.z += x->pos.z;
+	y->pos.w += x->pos.w;
+	y->rhw += x->rhw;
+	y->tc.u += x->tc.u;
+	y->tc.v += x->tc.v;
+	y->color.r += x->color.r;
+	y->color.g += x->color.g;
+	y->color.b += x->color.b;
 }
 // create trapezoid by triangle
 int trapezoid_init_triangle(trapezoid *trap, vertex p1,
@@ -413,7 +411,7 @@ void trapezoid_edge_interp(trapezoid& trap, float y) {
 }
 
 // caculate the start point and step of the scanline
-void trapezoid_init_scan_line(trapezoid trap, scanline& scanline, int y) {
+void trapezoid_init_scan_line(trapezoid& trap, scanline& scanline, int y) {
 	float width = trap.right.v.pos.x - trap.left.v.pos.x;
 	scanline.x = (int)(trap.left.v.pos.x + 0.5f);
 	scanline.w = (int)(trap.right.v.pos.x + 0.5f) - scanline.x;
@@ -442,38 +440,38 @@ typedef struct {
 #define RENDER_STATE_TEXTURE        2		
 #define RENDER_STATE_COLOR          4
 //initialize the device
-void device_init(device &device, int width, int height, void *fb) {
+void device_init(device *device, int width, int height, void *fb) {
 	int need = sizeof(void*) * (height * 2 + 1024) + width * height * 8;
 	char *ptr = (char*)malloc(need + 64);
 	char *framebuf, *zbuf;
 	int j;
 	assert(ptr);
-	device.framebuffer = (IUINT32**)ptr;
-	device.zbuffer = (float**)(ptr + sizeof(void*) * height);
+	device->framebuffer = (IUINT32**)ptr;
+	device->zbuffer = (float**)(ptr + sizeof(void*) * height);
 	ptr += sizeof(void*) * height * 2;
-	device.texture = (IUINT32**)ptr;
+	device->texture = (IUINT32**)ptr;
 	ptr += sizeof(void*) * 1024;
 	framebuf = (char*)ptr;
 	zbuf = (char*)ptr + width * height * 4;
 	ptr += width * height * 8;
 	if (fb != NULL) framebuf = (char*)fb;
 	for (j = 0; j < height; j++) {
-		device.framebuffer[j] = (IUINT32*)(framebuf + width * 4 * j);
-		device.zbuffer[j] = (float*)(zbuf + width * 4 * j);
+		device->framebuffer[j] = (IUINT32*)(framebuf + width * 4 * j);
+		device->zbuffer[j] = (float*)(zbuf + width * 4 * j);
 	}
-	device.texture[0] = (IUINT32*)ptr;
-	device.texture[1] = (IUINT32*)(ptr + 16);
-	memset(device.texture[0], 0, 64);
-	device.tex_width = 2;
-	device.tex_height = 2;
-	device.max_u = 1.0f;
-	device.max_v = 1.0f;
-	device.width = width;
-	device.height = height;
-	device.background = 0xc0c0c0;
-	device.foreground = 0;
-	device.transform=transform_init(width, height);
-	device.render_state = RENDER_STATE_WIREFRAME;
+	device->texture[0] = (IUINT32*)ptr;
+	device->texture[1] = (IUINT32*)(ptr + 16);
+	memset(device->texture[0], 0, 64);
+	device->tex_width = 2;
+	device->tex_height = 2;
+	device->max_u = 1.0f;
+	device->max_v = 1.0f;
+	device->width = width;
+	device->height = height;
+	device->background = 0xc0c0c0;
+	device->foreground = 0;
+	device->transform=transform_init(width, height);
+	device->render_state = RENDER_STATE_WIREFRAME;
 }
 // delete device
 void device_destroy(device& device) {
@@ -575,7 +573,7 @@ IUINT32 device_texture_read(device device, float u, float v) {
 	return device.texture[y][x];
 }
 //draw scanline
-void device_draw_scanline(device& device, scanline scanline) {
+void device_draw_scanline(device& device, scanline& scanline) {
 	IUINT32 *framebuffer = device.framebuffer[scanline.y];
 	float *zbuffer = device.zbuffer[scanline.y];
 	int x = scanline.x;
@@ -608,12 +606,12 @@ void device_draw_scanline(device& device, scanline scanline) {
 				}
 			}
 		}
-		vertex_add(scanline.v, scanline.step);
+		vertex_add(&scanline.v, &scanline.step);
 		if (x >= width) break;
 	}
 }
 // render func
-void device_render_trap(device& device, trapezoid trap) {
+void device_render_trap(device& device, trapezoid& trap) {
 	scanline scanline;
 	int j, top, bottom;
 	top = (int)(trap.top + 0.5f);
@@ -628,8 +626,8 @@ void device_render_trap(device& device, trapezoid trap) {
 	}
 }
 // draw triangle by render state
-void device_draw_primitive(device& device, vertex v1,
-	const vertex v2, const vertex v3) {
+void device_draw_primitive(device& device, vertex& v1,
+	 vertex& v2,  vertex& v3) {
 	point p1, p2, p3, c1, c2, c3;
 	int render_state = device.render_state;
 
@@ -868,7 +866,7 @@ int main(void)
 	if (screen_init(800, 600, title))
 		return -1;
 
-	device_init(device, 800, 600, screen_fb);
+	device_init(&device, 800, 600, screen_fb);
 	camera_at_zero(device, 3, 0, 0);
 
 	init_texture(device);
