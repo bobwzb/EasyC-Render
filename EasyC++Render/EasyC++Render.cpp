@@ -576,7 +576,7 @@ IUINT32 device_texture_read(device device, float u, float v) {
 	y = CMID(y, 0, device.tex_height - 1);
 	return device.texture[y][x];
 }
-//draw canline
+//draw scanline
 void device_draw_scanline(device device, scanline scanline) {
 	IUINT32 *framebuffer = device.framebuffer[scanline.y];
 	float *zbuffer = device.zbuffer[scanline.y];
@@ -612,6 +612,72 @@ void device_draw_scanline(device device, scanline scanline) {
 		}
 		vertex_add(scanline.v, scanline.step);
 		if (x >= width) break;
+	}
+}
+// render func
+void device_render_trap(device device, trapezoid trap) {
+	scanline scanline;
+	int j, top, bottom;
+	top = (int)(trap.top + 0.5f);
+	bottom = (int)(trap.bottom + 0.5f);
+	for (j = top; j < bottom; j++) {
+		if (j >= 0 && j < device.height) {
+			trapezoid_edge_interp(trap, (float)j + 0.5f);
+			trapezoid_init_scan_line(trap, scanline, j);
+			device_draw_scanline(device, scanline);
+		}
+		if (j >= device.height) break;
+	}
+}
+// draw triangle by render state
+void device_draw_primitive(device device, vertex v1,
+	const vertex v2, const vertex v3) {
+	point p1, p2, p3, c1, c2, c3;
+	int render_state = device.render_state;
+
+	// calculate the position
+	c1=transform_apply(device.transform,  v1.pos);
+	c2=transform_apply(device.transform,  v2.pos);
+	c3=transform_apply(device.transform,  v3.pos);
+
+	// project, if the point is not in the screen, we don't draw it
+	if (transform_check_cvv(c1) != 0) return;
+	if (transform_check_cvv(c2) != 0) return;
+	if (transform_check_cvv(c3) != 0) return;
+
+	// homogenize
+	p1=transform_homogenize(device.transform,  c1);
+	p2=transform_homogenize(device.transform,  c2);
+	p3=transform_homogenize(device.transform,  c3);
+
+	// add texture or color
+	if (render_state & (RENDER_STATE_TEXTURE | RENDER_STATE_COLOR)) {
+		vertex t1 = v1, t2 = v2, t3 = v3;
+		trapezoid traps[2];
+		int n;
+
+		t1.pos = p1;
+		t2.pos = p2;
+		t3.pos = p3;
+		t1.pos.w = c1.w;
+		t2.pos.w = c2.w;
+		t3.pos.w = c3.w;
+
+		vertex_rhw_init(t1);	
+		vertex_rhw_init(t2);	
+		vertex_rhw_init(t3);	
+
+		// use trapezoid to create 0~2 triangle
+		n = trapezoid_init_triangle(traps, t1, t2, t3);
+
+		if (n >= 1) device_render_trap(device, traps[0]);
+		if (n >= 2) device_render_trap(device, traps[1]);
+	}
+
+	if (render_state & RENDER_STATE_WIREFRAME) {		
+		device_draw_line(device, (int)p1.x, (int)p1.y, (int)p2.x, (int)p2.y, device.foreground);
+		device_draw_line(device, (int)p1.x, (int)p1.y, (int)p3.x, (int)p3.y, device.foreground);
+		device_draw_line(device, (int)p3.x, (int)p3.y, (int)p2.x, (int)p2.y, device.foreground);
 	}
 }
 int main()
