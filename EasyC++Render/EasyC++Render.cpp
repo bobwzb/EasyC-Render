@@ -187,15 +187,14 @@ matrix matrix_set_rotate(float x, float y, float z, float theta) {
 	return m;
 }
 // set camera
-matrix matrix_lookat(vector eye, vector at, vector up) {
-	matrix m;
+void matrix_set_lookat(matrix& m, const vector eye, const vector at, const vector up) {
 	vector xaxis, yaxis, zaxis;
 
-	zaxis=vector_sub(at, eye);
+	zaxis=vector_sub( at, eye);
 	vector_normalize(zaxis);
 	xaxis=vector_crossproduct( up, zaxis);
 	vector_normalize(xaxis);
-	yaxis=vector_crossproduct(zaxis, xaxis);
+	yaxis=vector_crossproduct( zaxis, xaxis);
 
 	m.m[0][0] = xaxis.x;
 	m.m[1][0] = xaxis.y;
@@ -214,7 +213,6 @@ matrix matrix_lookat(vector eye, vector at, vector up) {
 
 	m.m[0][3] = m.m[1][3] = m.m[2][3] = 0.0f;
 	m.m[3][3] = 1.0f;
-	return m;
 }
 //matrix perspective fov
 matrix matrix_set_perspective(float fovy, float aspect, float zn, float zf) {
@@ -340,9 +338,9 @@ void vertex_add(vertex& y, vertex x) {
 	y.color.b += x.color.b;
 }
 // create trapezoid by triangle
-int trapezoid_init_triangle(trapezoid trap[], vertex p1,
-	vertex p2, vertex p3) {
-	vertex p;
+int trapezoid_init_triangle(trapezoid *trap, vertex p1,
+	 vertex p2,  vertex p3) {
+	 vertex p;
 	float k, x;
 
 	if (p1.pos.y > p2.pos.y) p = p1, p1 = p2, p2 = p;
@@ -478,7 +476,7 @@ void device_init(device &device, int width, int height, void *fb) {
 	device.render_state = RENDER_STATE_WIREFRAME;
 }
 // delete device
-void device_destroy(device device) {
+void device_destroy(device& device) {
 	if (device.framebuffer)
 		free(device.framebuffer);
 	device.framebuffer = NULL;
@@ -577,7 +575,7 @@ IUINT32 device_texture_read(device device, float u, float v) {
 	return device.texture[y][x];
 }
 //draw scanline
-void device_draw_scanline(device device, scanline scanline) {
+void device_draw_scanline(device& device, scanline scanline) {
 	IUINT32 *framebuffer = device.framebuffer[scanline.y];
 	float *zbuffer = device.zbuffer[scanline.y];
 	int x = scanline.x;
@@ -615,7 +613,7 @@ void device_draw_scanline(device device, scanline scanline) {
 	}
 }
 // render func
-void device_render_trap(device device, trapezoid trap) {
+void device_render_trap(device& device, trapezoid trap) {
 	scanline scanline;
 	int j, top, bottom;
 	top = (int)(trap.top + 0.5f);
@@ -630,7 +628,7 @@ void device_render_trap(device device, trapezoid trap) {
 	}
 }
 // draw triangle by render state
-void device_draw_primitive(device device, vertex v1,
+void device_draw_primitive(device& device, vertex v1,
 	const vertex v2, const vertex v3) {
 	point p1, p2, p3, c1, c2, c3;
 	int render_state = device.render_state;
@@ -797,9 +795,112 @@ void screen_dispatch(void) {
 		DispatchMessage(&msg);
 	}
 }
-int main()
-{
-    std::cout << "Hello World!\n"; 
+void screen_update(void) {
+	HDC hDC = GetDC(screen_handle);
+	BitBlt(hDC, 0, 0, screen_w, screen_h, screen_dc, 0, 0, SRCCOPY);
+	ReleaseDC(screen_handle, hDC);
+	screen_dispatch();
 }
+
+
+//main program
+vertex mesh[8] = {
+	{ { -1, -1,  1, 1 }, { 0, 0 }, { 1.0f, 0.2f, 0.2f }, 1 },
+	{ {  1, -1,  1, 1 }, { 0, 1 }, { 0.2f, 1.0f, 0.2f }, 1 },
+	{ {  1,  1,  1, 1 }, { 1, 1 }, { 0.2f, 0.2f, 1.0f }, 1 },
+	{ { -1,  1,  1, 1 }, { 1, 0 }, { 1.0f, 0.2f, 1.0f }, 1 },
+	{ { -1, -1, -1, 1 }, { 0, 0 }, { 1.0f, 1.0f, 0.2f }, 1 },
+	{ {  1, -1, -1, 1 }, { 0, 1 }, { 0.2f, 1.0f, 1.0f }, 1 },
+	{ {  1,  1, -1, 1 }, { 1, 1 }, { 1.0f, 0.3f, 0.3f }, 1 },
+	{ { -1,  1, -1, 1 }, { 1, 0 }, { 0.2f, 1.0f, 0.3f }, 1 },
+};
+
+void draw_plane(device& device, int a, int b, int c, int d) {
+	vertex p1 = mesh[a], p2 = mesh[b], p3 = mesh[c], p4 = mesh[d];
+	p1.tc.u = 0, p1.tc.v = 0, p2.tc.u = 0, p2.tc.v = 1;
+	p3.tc.u = 1, p3.tc.v = 1, p4.tc.u = 1, p4.tc.v = 0;
+	device_draw_primitive(device, p1, p2, p3);
+	device_draw_primitive(device, p3, p4, p1);
+}
+
+void draw_box(device& device, float theta) {
+	matrix m;
+	m=matrix_set_rotate( -1, -0.5, 1, theta);
+	device.transform.world = m;
+	transform_update(device.transform);
+	draw_plane(device, 0, 1, 2, 3);
+	draw_plane(device, 7, 6, 5, 4);
+	draw_plane(device, 0, 4, 5, 1);
+	draw_plane(device, 1, 5, 6, 2);
+	draw_plane(device, 2, 6, 7, 3);
+	draw_plane(device, 3, 7, 4, 0);
+}
+
+void camera_at_zero(device& device, float x, float y, float z) {
+	point eye = { x, y, z, 1 }, at = { 0, 0, 0, 1 }, up = { 0, 0, 1, 1 };
+	matrix_set_lookat(device.transform.view,eye, at, up);
+	transform_update(device.transform);
+}
+
+void init_texture(device& device) {
+	static IUINT32 texture[256][256];
+	int i, j;
+	for (j = 0; j < 256; j++) {
+		for (i = 0; i < 256; i++) {
+			int x = i / 32, y = j / 32;
+			texture[j][i] = ((x + y) & 1) ? 0xffffff : 0x3fbcef;
+		}
+	}
+	device_set_texture(device, texture, 256 * 4, 256, 256);
+}
+int main(void)
+{
+	device device;
+	int states[] = { RENDER_STATE_TEXTURE, RENDER_STATE_COLOR, RENDER_STATE_WIREFRAME };
+	int indicator = 0;
+	int kbhit = 0;
+	float alpha = 1;
+	float pos = 3.5;
+
+	TCHAR title[] = _T("C++ Render ")
+		_T("Left/Right: rotation, Up/Down: forward/backward, Space: switch state");
+
+	if (screen_init(800, 600, title))
+		return -1;
+
+	device_init(device, 800, 600, screen_fb);
+	camera_at_zero(device, 3, 0, 0);
+
+	init_texture(device);
+	device.render_state = RENDER_STATE_TEXTURE;
+
+	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
+		screen_dispatch();
+		device_clear(device, 1);
+		camera_at_zero(device, pos, 0, 0);
+
+		if (screen_keys[VK_UP]) pos -= 0.01f;
+		if (screen_keys[VK_DOWN]) pos += 0.01f;
+		if (screen_keys[VK_LEFT]) alpha += 0.01f;
+		if (screen_keys[VK_RIGHT]) alpha -= 0.01f;
+
+		if (screen_keys[VK_SPACE]) {
+			if (kbhit == 0) {
+				kbhit = 1;
+				if (++indicator >= 3) indicator = 0;
+				device.render_state = states[indicator];
+			}
+		}
+		else {
+			kbhit = 0;
+		}
+
+		draw_box(device, alpha);
+		screen_update();
+		Sleep(1);
+	}
+	return 0;
+}
+
 
 
