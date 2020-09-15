@@ -35,26 +35,26 @@ vector vector_add( vector& x, vector& y) {
 	return z;
 }
 //z=x-y
-vector vector_sub(vector& x, vector& y) {
-	vector z;
-	z.x = x.x - y.x;
-	z.y = x.y - y.y;
-	z.z = x.z - y.z;
-	z.w = 1.0;
-	return z;
+void vector_sub(vector *z, const vector *x, const vector *y) {
+	z->x = x->x - y->x;
+	z->y = x->y - y->y;
+	z->z = x->z - y->z;
+	z->w = 1.0;
 }
 //dot product
-float vector_dot(vector& z, vector& x) {
-	return z.x*x.x + z.y*x.y + z.z*x.z;
+float vector_dot(const vector *x, const vector *y) {
+	return x->x * y->x + x->y * y->y + x->z * y->z;
 }
 //cross product
-vector vector_crossproduct(vector& x, vector& y) {
-	vector tmp;
-	tmp.x = x.y*y.z - x.z*y.y;
-	tmp.y = x.z*y.x - x.x*y.z;
-	tmp.z = x.x*y.y - x.y*y.x;
-	tmp.w = 1.0f;
-	return tmp;
+void vector_crossproduct(vector *z, const vector *x, const vector *y) {
+	float m1, m2, m3;
+	m1 = x->y * y->z - x->z * y->y;
+	m2 = x->z * y->x - x->x * y->z;
+	m3 = x->x * y->y - x->y * y->x;
+	z->x = m1;
+	z->y = m2;
+	z->z = m3;
+	z->w = 1.0f;
 }
 // vector interpolation
 void vector_interp(vector *z, const vector *x1, const vector *x2, float t) {
@@ -178,7 +178,7 @@ void matrix_set_rotate(matrix *m, float x, float y, float z, float theta) {
 	m->m[3][3] = 1.0f;
 }
 // set camera
-void matrix_set_lookat(matrix *m, const vector *eye, const vector *at, const vector *up) {
+void matrix_set_lookat(matrix *m,const vector *eye, const vector *at, const vector *up) {
 	vector xaxis, yaxis, zaxis;
 
 	vector_sub(&zaxis, at, eye);
@@ -190,17 +190,17 @@ void matrix_set_lookat(matrix *m, const vector *eye, const vector *at, const vec
 	m->m[0][0] = xaxis.x;
 	m->m[1][0] = xaxis.y;
 	m->m[2][0] = xaxis.z;
-	m->m[3][0] = -vector_dotproduct(&xaxis, eye);
+	m->m[3][0] = -vector_dot(&xaxis, eye);
 
 	m->m[0][1] = yaxis.x;
 	m->m[1][1] = yaxis.y;
 	m->m[2][1] = yaxis.z;
-	m->m[3][1] = -vector_dotproduct(&yaxis, eye);
+	m->m[3][1] = -vector_dot(&yaxis, eye);
 
 	m->m[0][2] = zaxis.x;
 	m->m[1][2] = zaxis.y;
 	m->m[2][2] = zaxis.z;
-	m->m[3][2] = -vector_dotproduct(&zaxis, eye);
+	m->m[3][2] = -vector_dot(&zaxis, eye);
 
 	m->m[0][3] = m->m[1][3] = m->m[2][3] = 0.0f;
 	m->m[3][3] = 1.0f;
@@ -468,16 +468,16 @@ void device_destroy(device& device) {
 	device.texture = NULL;
 }
 // set the texture
-void device_set_texture(device& device, void *bits, long pitch, int w, int h) {
+void device_set_texture(device *device, void *bits, long pitch, int w, int h) {
 	char *ptr = (char*)bits;
 	int j;
 	assert(w <= 1024 && h <= 1024);
-	for (j = 0; j < h; ptr += pitch, j++) 	// recaculate the pointer
-		device.texture[j] = (IUINT32*)ptr;
-	device.tex_width = w;
-	device.tex_height = h;
-	device.max_u = (float)(w - 1);
-	device.max_v = (float)(h - 1);
+	for (j = 0; j < h; ptr += pitch, j++) 	// 重新计算每行纹理的指针
+		device->texture[j] = (IUINT32*)ptr;
+	device->tex_width = w;
+	device->tex_height = h;
+	device->max_u = (float)(w - 1);
+	device->max_v = (float)(h - 1);
 }
 // draw point
 void device_pixel(device *device, int x, int y, IUINT32 color) {
@@ -486,18 +486,18 @@ void device_pixel(device *device, int x, int y, IUINT32 color) {
 	}
 }
 // clear framebuffer and zbuffer
-void device_clear(device& device, int mode) {
-	int y, x, height = device.height;
-	for (y = 0; y < device.height; y++) {
-		IUINT32 *dst = device.framebuffer[y];
+void device_clear(device *device, int mode) {
+	int y, x, height = device->height;
+	for (y = 0; y < device->height; y++) {
+		IUINT32 *dst = device->framebuffer[y];
 		IUINT32 cc = (height - 1 - y) * 230 / (height - 1);
 		cc = (cc << 16) | (cc << 8) | cc;
-		if (mode == 0) cc = device.background;
-		for (x = device.width; x > 0; dst++, x--) dst[0] = cc;
+		if (mode == 0) cc = device->background;
+		for (x = device->width; x > 0; dst++, x--) dst[0] = cc;
 	}
-	for (y = 0; y < device.height; y++) {
-		float *dst = device.zbuffer[y];
-		for (x = device.width; x > 0; dst++, x--) dst[0] = 0.0f;
+	for (y = 0; y < device->height; y++) {
+		float *dst = device->zbuffer[y];
+		for (x = device->width; x > 0; dst++, x--) dst[0] = 0.0f;
 	}
 }
 // draw the line
@@ -646,18 +646,18 @@ void device_draw_primitive(device *device,  vertex *v1,
 		t2.pos.w = c2.w;
 		t3.pos.w = c3.w;
 
-		vertex_rhw_init(&t1);	// 初始化 w
-		vertex_rhw_init(&t2);	// 初始化 w
-		vertex_rhw_init(&t3);	// 初始化 w
+		vertex_rhw_init(&t1);	
+		vertex_rhw_init(&t2);	
+		vertex_rhw_init(&t3);	
 
-		// 拆分三角形为0-2个梯形，并且返回可用梯形数量
+		
 		n = trapezoid_init_triangle(traps, &t1, &t2, &t3);
 
 		if (n >= 1) device_render_trap(device, &traps[0]);
 		if (n >= 2) device_render_trap(device, &traps[1]);
 	}
 
-	if (render_state & RENDER_STATE_WIREFRAME) {		// 线框绘制
+	if (render_state & RENDER_STATE_WIREFRAME) {		
 		device_draw_line(device, (int)p1.x, (int)p1.y, (int)p2.x, (int)p2.y, device->foreground);
 		device_draw_line(device, (int)p1.x, (int)p1.y, (int)p3.x, (int)p3.y, device->foreground);
 		device_draw_line(device, (int)p3.x, (int)p3.y, (int)p2.x, (int)p2.y, device->foreground);
@@ -666,18 +666,18 @@ void device_draw_primitive(device *device,  vertex *v1,
 //draw the windows
 int screen_w, screen_h, screen_exit = 0;
 int screen_mx = 0, screen_my = 0, screen_mb = 0;
-int screen_keys[512];	// 当前键盘按下状态
-static HWND screen_handle = NULL;		// 主窗口 HWND
-static HDC screen_dc = NULL;			// 配套的 HDC
-static HBITMAP screen_hb = NULL;		// DIB
-static HBITMAP screen_ob = NULL;		// 老的 BITMAP
-unsigned char *screen_fb = NULL;		// frame buffer
+int screen_keys[512];	
+static HWND screen_handle = NULL;		
+static HDC screen_dc = NULL;			
+static HBITMAP screen_hb = NULL;		
+static HBITMAP screen_ob = NULL;		
+unsigned char *screen_fb = NULL;		
 long screen_pitch = 0;
 
-int screen_init(int w, int h, const TCHAR *title);	// 屏幕初始化
-int screen_close(void);								// 关闭屏幕
-void screen_dispatch(void);							// 处理消息
-void screen_update(void);							// 显示 FrameBuffer
+int screen_init(int w, int h, const TCHAR *title);	
+int screen_close(void);								
+void screen_dispatch(void);							
+void screen_update(void);							
 
 // win32 event handler
 static LRESULT screen_events(HWND, UINT, WPARAM, LPARAM);
@@ -812,7 +812,7 @@ void draw_box(device *device, float theta) {
 	matrix m;
 	matrix_set_rotate(&m, -1, -0.5, 1, theta);
 	device->transform.world = m;
-	transform_update(&device->transform);
+	transform_update(device->transform);
 	draw_plane(device, 0, 1, 2, 3);
 	draw_plane(device, 7, 6, 5, 4);
 	draw_plane(device, 0, 4, 5, 1);
@@ -821,13 +821,13 @@ void draw_box(device *device, float theta) {
 	draw_plane(device, 3, 7, 4, 0);
 }
 
-void camera_at_zero(device& device, float x, float y, float z) {
+void camera_at_zero(device* device, float x, float y, float z) {
 	point eye = { x, y, z, 1 }, at = { 0, 0, 0, 1 }, up = { 0, 0, 1, 1 };
-	matrix_set_lookat(device.transform.view,eye, at, up);
-	transform_update(device.transform);
+	matrix_set_lookat(&device->transform.view,&eye, &at, &up);
+	transform_update(device->transform);
 }
 
-void init_texture(device& device) {
+void init_texture(device *device) {
 	static IUINT32 texture[256][256];
 	int i, j;
 	for (j = 0; j < 256; j++) {
@@ -854,15 +854,15 @@ int main(void)
 		return -1;
 
 	device_init(&device, 800, 600, screen_fb);
-	camera_at_zero(device, 3, 0, 0);
+	camera_at_zero(&device, 3, 0, 0);
 
-	init_texture(device);
+	init_texture(&device);
 	device.render_state = RENDER_STATE_TEXTURE;
 
 	while (screen_exit == 0 && screen_keys[VK_ESCAPE] == 0) {
 		screen_dispatch();
-		device_clear(device, 1);
-		camera_at_zero(device, pos, 0, 0);
+		device_clear(&device, 1);
+		camera_at_zero(&device, pos, 0, 0);
 
 		if (screen_keys[VK_UP]) pos -= 0.01f;
 		if (screen_keys[VK_DOWN]) pos += 0.01f;
@@ -880,7 +880,7 @@ int main(void)
 			kbhit = 0;
 		}
 
-		draw_box(device, alpha);
+		draw_box(&device, alpha);
 		screen_update();
 		Sleep(1);
 	}
