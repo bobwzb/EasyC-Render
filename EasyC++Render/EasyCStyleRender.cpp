@@ -472,7 +472,7 @@ void device_set_texture(device *device, void *bits, long pitch, int w, int h) {
 	char *ptr = (char*)bits;
 	int j;
 	assert(w <= 1024 && h <= 1024);
-	for (j = 0; j < h; ptr += pitch, j++) 	// 重新计算每行纹理的指针
+	for (j = 0; j < h; ptr += pitch, j++) 	
 		device->texture[j] = (IUINT32*)ptr;
 	device->tex_width = w;
 	device->tex_height = h;
@@ -838,7 +838,7 @@ void init_texture(device *device) {
 	}
 	device_set_texture(device, texture, 256 * 4, 256, 256);
 }
-int main(void)
+/*int main(void)
 {
 	device device;
 	int states[] = { RENDER_STATE_TEXTURE, RENDER_STATE_COLOR, RENDER_STATE_WIREFRAME };
@@ -885,7 +885,7 @@ int main(void)
 		Sleep(1);
 	}
 	return 0;
-}
+}*/
 
 
 
