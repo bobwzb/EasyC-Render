@@ -162,4 +162,170 @@ template <typename T> struct Vector<4, T> {
 		return *this; 
 	}
 };
+// = (+a)
+template <size_t N, typename T>
+inline Vector<N, T> operator + (const Vector<N, T>& a) {
+	return a;
+}
+
+// = (-a)
+template <size_t N, typename T>
+inline Vector<N, T> operator - (const Vector<N, T>& a) {
+	Vector<N, T> b;
+	for (size_t i = 0; i < N; i++) b[i] = -a[i];
+	return b;
+}
+
+// = (a == b) ? true : false
+template <size_t N, typename T>
+inline bool operator == (const Vector<N, T>& a, const Vector<N, T>& b) {
+	for (size_t i = 0; i < N; i++) if (a[i] != b[i]) return false;
+	return true;
+}
+
+// = (a != b)? true : false
+template <size_t N, typename T>
+inline bool operator != (const Vector<N, T>& a, const Vector<N, T>& b) {
+	return !(a == b);
+}
+
+// = a + b
+template <size_t N, typename T>
+inline Vector<N, T> operator + (const Vector<N, T>& a, const Vector<N, T>& b) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = a[i] + b[i];
+	return c;
+}
+
+// = a - b
+template <size_t N, typename T>
+inline Vector<N, T> operator - (const Vector<N, T>& a, const Vector<N, T>& b) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = a[i] - b[i];
+	return c;
+}
+
+// = a * b£¬not dot product, use for color multiple
+template <size_t N, typename T>
+inline Vector<N, T> operator * (const Vector<N, T>& a, const Vector<N, T>& b) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = a[i] * b[i];
+	return c;
+}
+
+// = a / b, divide each element
+template <size_t N, typename T>
+inline Vector<N, T> operator / (const Vector<N, T>& a, const Vector<N, T>& b) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = a[i] / b[i];
+	return c;
+}
+
+// = a * x
+template <size_t N, typename T>
+inline Vector<N, T> operator * (const Vector<N, T>& a, T x) {
+	Vector<N, T> b;
+	for (size_t i = 0; i < N; i++) b[i] = a[i] * x;
+	return b;
+}
+
+// = x * a
+template <size_t N, typename T>
+inline Vector<N, T> operator * (T x, const Vector<N, T>& a) {
+	Vector<N, T> b;
+	for (size_t i = 0; i < N; i++) b[i] = a[i] * x;
+	return b;
+}
+
+// = a / x
+template <size_t N, typename T>
+inline Vector<N, T> operator / (const Vector<N, T>& a, T x) {
+	Vector<N, T> b;
+	for (size_t i = 0; i < N; i++) b[i] = a[i] / x;
+	return b;
+}
+
+// = x / a
+template <size_t N, typename T>
+inline Vector<N, T> operator / (T x, const Vector<N, T>& a) {
+	Vector<N, T> b;
+	for (size_t i = 0; i < N; i++) b[i] = x / a[i];
+	return b;
+}
+
+// a += b
+template <size_t N, typename T>
+inline Vector<N, T>& operator += (Vector<N, T>& a, const Vector<N, T>& b) {
+	for (size_t i = 0; i < N; i++) a[i] += b[i];
+	return a;
+}
+
+// a -= b
+template <size_t N, typename T>
+inline Vector<N, T>& operator -= (Vector<N, T>& a, const Vector<N, T>& b) {
+	for (size_t i = 0; i < N; i++) a[i] -= b[i];
+	return a;
+}
+
+// a *= b
+template <size_t N, typename T>
+inline Vector<N, T>& operator *= (Vector<N, T>& a, const Vector<N, T>& b) {
+	for (size_t i = 0; i < N; i++) a[i] *= b[i];
+	return a;
+}
+
+// a /= b
+template <size_t N, typename T>
+inline Vector<N, T>& operator /= (Vector<N, T>& a, const Vector<N, T>& b) {
+	for (size_t i = 0; i < N; i++) a[i] /= b[i];
+	return a;
+}
+
+// a *= x
+template <size_t N, typename T>
+inline Vector<N, T>& operator *= (Vector<N, T>& a, T x) {
+	for (size_t i = 0; i < N; i++) a[i] *= x;
+	return a;
+}
+
+// a /= x
+template <size_t N, typename T>
+inline Vector<N, T>& operator /= (Vector<N, T>& a, T x) {
+	for (size_t i = 0; i < N; i++) a[i] /= x;
+	return a;
+}
+
+template<size_t N1, size_t N2, typename T>
+inline Vector<N1, T> vector_convert(const Vector<N2, T>& a, T fill = 1) {
+	Vector<N1, T> b;
+	for (size_t i = 0; i < N1; i++)
+		b[i] = (i < N2) ? a[i] : fill;
+	return b;
+}
+
+// = |a| ^ 2
+template<size_t N, typename T>
+inline T vector_length_square(const Vector<N, T>& a) {
+	T sum = 0;
+	for (size_t i = 0; i < N; i++) sum += a[i] * a[i];
+	return sum;
+}
+
+// = |a|
+template<size_t N, typename T>
+inline T vector_length(const Vector<N, T>& a) {
+	return sqrt(vector_length_square(a));
+}
+
+// = |a|,specialize for float
+template<size_t N>
+inline float vector_length(const Vector<N, float>& a) {
+	return sqrtf(vector_length_square(a));
+}
+
+// = a / |a|
+template<size_t N, typename T>
+inline Vector<N, T> vector_normalize(const Vector<N, T>& a) {
+	return a / vector_length(a);
+}
 #endif // !_CPP_RENDER_
