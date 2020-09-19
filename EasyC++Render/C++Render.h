@@ -328,4 +328,143 @@ template<size_t N, typename T>
 inline Vector<N, T> vector_normalize(const Vector<N, T>& a) {
 	return a / vector_length(a);
 }
+
+//transfer to different dimension
+template<size_t N1, size_t N2, typename T>
+inline Vector<N1, T> vector_convert(const Vector<N2, T>& a, T fill = 1) {
+	Vector<N1, T> b;
+	for (size_t i = 0; i < N1; i++)
+		b[i] = (i < N2) ? a[i] : fill;
+	return b;
+}
+
+// = |a| ^ 2
+template<size_t N, typename T>
+inline T vector_length_square(const Vector<N, T>& a) {
+	T sum = 0;
+	for (size_t i = 0; i < N; i++) sum += a[i] * a[i];
+	return sum;
+}
+
+// = |a|
+template<size_t N, typename T>
+inline T vector_length(const Vector<N, T>& a) {
+	return sqrt(vector_length_square(a));
+}
+
+// = |a|, specialize for float
+template<size_t N>
+inline float vector_length(const Vector<N, float>& a) {
+	return sqrtf(vector_length_square(a));
+}
+
+// = a / |a|
+template<size_t N, typename T>
+inline Vector<N, T> vector_normalize(const Vector<N, T>& a) {
+	return a / vector_length(a);
+}
+
+// dot product
+template<size_t N, typename T>
+inline T vector_dot(const Vector<N, T>& a, const Vector<N, T>& b) {
+	T sum = 0;
+	for (size_t i = 0; i < N; i++) sum += a[i] * b[i];
+	return sum;
+}
+
+// = a + (b - a) * t
+template<size_t N, typename T>
+inline Vector<N, T> vector_lerp(const Vector<N, T>& a, const Vector<N, T>& b, float t) {
+	return a + (b - a) * t;
+}
+
+// 2D cross product
+template<typename T>
+inline T vector_cross(const Vector<2, T>& a, const Vector<2, T>& b) {
+	return a.x * b.y - a.y * b.x;
+}
+
+// 3D cross product
+template<typename T>
+inline Vector<3, T> vector_cross(const Vector<3, T>& a, const Vector<3, T>& b) {
+	return Vector<3, T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
+
+// 4D cross product, leave the last dimension
+template<typename T>
+inline Vector<4, T> vector_cross(const Vector<4, T>& a, const Vector<4, T>& b) {
+	return Vector<4, T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, a.w);
+}
+
+//set element to maxium
+template<size_t N, typename T>
+inline Vector<N, T> vector_max(const Vector<N, T>& a, const Vector<N, T>& b) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = (a[i] > b[i]) ? a[i] : b[i];
+	return c;
+}
+
+// set elements to min
+template<size_t N, typename T>
+inline Vector<N, T> vector_min(const Vector<N, T>& a, const Vector<N, T>& b) {
+	Vector<N, T> c;
+	for (size_t i = 0; i < N; i++) c[i] = (a[i] < b[i]) ? a[i] : b[i];
+	return c;
+}
+
+// set the value inside max and min
+template<size_t N, typename T>
+inline Vector<N, T> vector_between(const Vector<N, T>& minx, const Vector<N, T>& maxx, const Vector<N, T>& x) {
+	return vector_min(vector_max(minx, x), maxx);
+}
+
+// detect whether the two vector is close enough
+template<size_t N, typename T>
+inline bool vector_near(const Vector<N, T>& a, const Vector<N, T>& b, T dist) {
+	return (vector_length_square(a - b) <= dist);
+}
+
+// detect whether the two vector is same under single
+template<size_t N>
+inline bool vector_near_equal(const Vector<N, float>& a, const Vector<N, float>& b, float e = 0.0001) {
+	return vector_near(a, b, e);
+}
+
+// detect whether the two vector is same under double
+template<size_t N>
+inline bool vector_near_equal(const Vector<N, double>& a, const Vector<N, double>& b, double e = 0.0000001) {
+	return vector_near(a, b, e);
+}
+
+// set the value inside scope, default inside[0,1]
+template<size_t N, typename T>
+inline Vector<N, T> vector_clamp(const Vector<N, T>& a, T minx = 0, T maxx = 1) {
+	Vector<N, T> b;
+	for (size_t i = 0; i < N; i++) {
+		T x = (a[i] < minx) ? minx : a[i];
+		b[i] = (x > maxx) ? maxx : x;
+	}
+	return b;
+}
+
+// print the value to os
+template<size_t N, typename T>
+inline std::ostream& operator << (std::ostream& os, const Vector<N, T>& a) {
+	os << "[";
+	for (size_t i = 0; i < N; i++) {
+		os << a[i];
+		if (i < N - 1) os << ", ";
+	}
+	os << "]";
+	return os;
+}
+
+// print the value
+template<size_t N, typename T>
+inline std::string vector_repr(const Vector<N, T>& a) {
+	std::stringstream ss;
+	ss << a;
+	return ss.str();
+}
+
 #endif // !_CPP_RENDER_
