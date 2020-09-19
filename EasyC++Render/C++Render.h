@@ -561,4 +561,220 @@ template<size_t ROW, size_t COL, typename T> struct Matrix {
 	//
 };
 
+//operator overload for matrix
+template<size_t ROW, size_t COL, typename T>
+inline bool operator == (const Matrix<ROW, COL, T>& a, const Matrix<ROW, COL, T>& b) {
+	for (size_t r = 0; r < ROW; r++) {
+		for (size_t c = 0; c < COL; c++) {
+			if (a.m[r][c] != b.m[r][c]) return false;
+		}
+	}
+	return true;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline bool operator != (const Matrix<ROW, COL, T>& a, const Matrix<ROW, COL, T>& b) {
+	return !(a == b);
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator + (const Matrix<ROW, COL, T>& src) {
+	return src;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator - (const Matrix<ROW, COL, T>& src) {
+	Matrix<ROW, COL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < COL; i++)
+			out.m[j][i] = -src.m[j][i];
+	}
+	return out;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator + (const Matrix<ROW, COL, T>& a, const Matrix<ROW, COL, T>& b) {
+	Matrix<ROW, COL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < COL; i++)
+			out.m[j][i] = a.m[j][i] + b.m[j][i];
+	}
+	return out;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator - (const Matrix<ROW, COL, T>& a, const Matrix<ROW, COL, T>& b) {
+	Matrix<ROW, COL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < COL; i++)
+			out.m[j][i] = a.m[j][i] - b.m[j][i];
+	}
+	return out;
+}
+
+template<size_t ROW, size_t COL, size_t NEWCOL, typename T>
+inline Matrix<ROW, NEWCOL, T> operator * (const Matrix<ROW, COL, T>& a, const Matrix<COL, NEWCOL, T>& b) {
+	Matrix<ROW, NEWCOL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < NEWCOL; i++) {
+			out.m[j][i] = vector_dot(a.Row(j), b.Col(i));
+		}
+	}
+	return out;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator * (const Matrix<ROW, COL, T>& a, T x) {
+	Matrix<ROW, COL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < COL; i++) {
+			out.m[j][i] = a.m[j][i] * x;
+		}
+	}
+	return out;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator / (const Matrix<ROW, COL, T>& a, T x) {
+	Matrix<ROW, COL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < COL; i++) {
+			out.m[j][i] = a.m[j][i] / x;
+		}
+	}
+	return out;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator * (T x, const Matrix<ROW, COL, T>& a) {
+	return (a * x);
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Matrix<ROW, COL, T> operator / (T x, const Matrix<ROW, COL, T>& a) {
+	Matrix<ROW, COL, T> out;
+	for (size_t j = 0; j < ROW; j++) {
+		for (size_t i = 0; i < COL; i++) {
+			out.m[j][i] = x / a.m[j][i];
+		}
+	}
+	return out;
+}
+
+//speicial case, return type is vector
+template<size_t ROW, size_t COL, typename T>
+inline Vector<COL, T> operator * (const Vector<ROW, T>& a, const Matrix<ROW, COL, T>& m) {
+	Vector<COL, T> b;
+	for (size_t i = 0; i < COL; i++)
+		b[i] = vector_dot(a, m.Col(i));
+	return b;
+}
+
+template<size_t ROW, size_t COL, typename T>
+inline Vector<ROW, T> operator * (const Matrix<ROW, COL, T>& m, const Vector<COL, T>& a) {
+	Vector<ROW, T> b;
+	for (size_t i = 0; i < ROW; i++)
+		b[i] = vector_dot(a, m.Row(i));
+	return b;
+}
+
+// calculate determinant 1D
+template<typename T>
+inline T matrix_det(const Matrix<1, 1, T> &m) {
+	return m[0][0];
+}
+
+// calculate determinant 2D
+template<typename T>
+inline T matrix_det(const Matrix<2, 2, T> &m) {
+	return m[0][0] * m[1][1] - m[0][1] * m[1][0];
+}
+
+// calculate determinant
+template<size_t N, typename T>
+inline T matrix_det(const Matrix<N, N, T> &m) {
+	T sum = 0;
+	for (size_t i = 0; i < N; i++) sum += m[0][i] * matrix_cofactor(m, 0, i);
+	return sum;
+}
+
+// cofactor 1D
+template<typename T>
+inline T matrix_cofactor(const Matrix<1, 1, T> &m, size_t row, size_t col) {
+	return 0;
+}
+
+// cofactor
+template<size_t N, typename T>
+inline T matrix_cofactor(const Matrix<N, N, T> &m, size_t row, size_t col) {
+	return matrix_det(m.GetMinor(row, col)) * (((row + col) % 2) ? -1 : 1);
+}
+
+// get adjugate matrix
+template<size_t N, typename T>
+inline Matrix<N, N, T> matrix_adjoint(const Matrix<N, N, T> &m) {
+	Matrix<N, N, T> ret;
+	for (size_t j = 0; j < N; j++) {
+		for (size_t i = 0; i < N; i++) 
+			ret[j][i] = matrix_cofactor(m, i, j);
+	}
+	return ret;
+}
+
+// inverse matrix
+template<size_t N, typename T>
+inline Matrix<N, N, T> matrix_invert(const Matrix<N, N, T> &m) {
+	Matrix<N, N, T> ret = matrix_adjoint(m);
+	T det = vector_dot(m.Row(0), ret.Col(0));
+	return ret / det;
+}
+
+// add to os 
+template<size_t ROW, size_t COL, typename T>
+inline std::ostream& operator << (std::ostream& os, const Matrix<ROW, COL, T>& m) {
+	for (size_t r = 0; r < ROW; r++) {
+		Vector<COL, T> row = m.Row(r);
+		os << row << std::endl;
+	}
+	return os;
+}
+
+//tool function
+template<typename T> inline T Abs(T x) { 
+	return (x < 0) ? (-x) : x; 
+}
+template<typename T> inline T Max(T x, T y) { 
+	return (x < y) ? y : x; 
+}
+template<typename T> inline T Min(T x, T y) { 
+	return (x > y) ? y : x; 
+}
+
+template<typename T> inline bool NearEqual(T x, T y, T error) {
+	return (Abs(x - y) < error);
+}
+
+template<typename T> inline T Between(T xmin, T xmax, T x) {
+	return Min(Max(xmin, x), xmax);
+}
+
+// set varaible to [0,1]
+template<typename T> inline T Saturate(T x) {
+	return Between<T>(0, 1, x);
+}
+
+//define type name
+typedef Matrix<4, 4, float> Mat4x4f;
+typedef Matrix<3, 3, float> Mat3x3f;
+typedef Matrix<4, 3, float> Mat4x3f;
+typedef Matrix<3, 4, float> Mat3x4f;
+typedef Vector<2, float>  Vec2f;
+typedef Vector<2, double> Vec2d;
+typedef Vector<2, int>    Vec2i;
+typedef Vector<3, float>  Vec3f;
+typedef Vector<3, double> Vec3d;
+typedef Vector<3, int>    Vec3i;
+typedef Vector<4, float>  Vec4f;
+typedef Vector<4, double> Vec4d;
+typedef Vector<4, int>    Vec4i;
 #endif // !_CPP_RENDER_
