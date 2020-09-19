@@ -777,4 +777,92 @@ typedef Vector<3, int>    Vec3i;
 typedef Vector<4, float>  Vec4f;
 typedef Vector<4, double> Vec4d;
 typedef Vector<4, int>    Vec4i;
+
+// vector to color, use 4*8 Bytes to store it
+inline static uint32_t vector_to_color(const Vec4f& color) {
+	uint32_t r = (uint32_t)Between(0, 255, (int)(color.r * 255.0f));
+	uint32_t g = (uint32_t)Between(0, 255, (int)(color.g * 255.0f));
+	uint32_t b = (uint32_t)Between(0, 255, (int)(color.b * 255.0f));
+	uint32_t a = (uint32_t)Between(0, 255, (int)(color.a * 255.0f));
+	return (r << 16) | (g << 8) | b | (a << 24);
+}
+
+// vector to color without alpha
+inline static uint32_t vector_to_color(const Vec3f& color) {
+	return vector_to_color(color.xyz1());
+}
+
+// color to vector
+inline static Vec4f vector_from_color(uint32_t rgba) {
+	Vec4f out;
+	out.r = ((rgba >> 16) & 0xff) / 255.0f;
+	out.g = ((rgba >> 8) & 0xff) / 255.0f;
+	out.b = ((rgba >> 0) & 0xff) / 255.0f;
+	out.a = ((rgba >> 24) & 0xff) / 255.0f;
+	return out;
+}
+
+// get zero matrix
+inline static Mat4x4f matrix_set_zero() {
+	Mat4x4f m;
+	m.m[0][0] = m.m[0][1] = m.m[0][2] = m.m[0][3] = 0.0f;
+	m.m[1][0] = m.m[1][1] = m.m[1][2] = m.m[1][3] = 0.0f;
+	m.m[2][0] = m.m[2][1] = m.m[2][2] = m.m[2][3] = 0.0f;
+	m.m[3][0] = m.m[3][1] = m.m[3][2] = m.m[3][3] = 0.0f;
+	return m;
+}
+
+// get identity matrix
+inline static Mat4x4f matrix_set_identity() {
+	Mat4x4f m;
+	m.m[0][0] = m.m[1][1] = m.m[2][2] = m.m[3][3] = 1.0f;
+	m.m[0][1] = m.m[0][2] = m.m[0][3] = 0.0f;
+	m.m[1][0] = m.m[1][2] = m.m[1][3] = 0.0f;
+	m.m[2][0] = m.m[2][1] = m.m[2][3] = 0.0f;
+	m.m[3][0] = m.m[3][1] = m.m[3][2] = 0.0f;
+	return m;
+}
+
+// matrix for translate
+inline static Mat4x4f matrix_set_translate(float x, float y, float z) {
+	Mat4x4f m = matrix_set_identity();
+	m.m[3][0] = x;
+	m.m[3][1] = y;
+	m.m[3][2] = z;
+	return m;
+}
+
+// matrix for scale
+inline static Mat4x4f matrix_set_scale(float x, float y, float z) {
+	Mat4x4f m = matrix_set_identity();
+	m.m[0][0] = x;
+	m.m[1][1] = y;
+	m.m[2][2] = z;
+	return m;
+}
+
+// get rotation matrix
+inline static Mat4x4f matrix_set_rotate(float x, float y, float z, float theta) {
+	float qsin = (float)sin(theta * 0.5f);
+	float qcos = (float)cos(theta * 0.5f);
+	float w = qcos;
+	Vec3f vec = vector_normalize(Vec3f(x, y, z));
+	x = vec.x * qsin;
+	y = vec.y * qsin;
+	z = vec.z * qsin;
+	Mat4x4f m;
+	m.m[0][0] = 1 - 2 * y * y - 2 * z * z;
+	m.m[1][0] = 2 * x * y - 2 * w * z;
+	m.m[2][0] = 2 * x * z + 2 * w * y;
+	m.m[0][1] = 2 * x * y + 2 * w * z;
+	m.m[1][1] = 1 - 2 * x * x - 2 * z * z;
+	m.m[2][1] = 2 * y * z - 2 * w * x;
+	m.m[0][2] = 2 * x * z - 2 * w * y;
+	m.m[1][2] = 2 * y * z + 2 * w * x;
+	m.m[2][2] = 1 - 2 * x * x - 2 * y * y;
+	m.m[0][3] = m.m[1][3] = m.m[2][3] = 0.0f;
+	m.m[3][0] = m.m[3][1] = m.m[3][2] = 0.0f;
+	m.m[3][3] = 1.0f;
+	return m;
+}
 #endif // !_CPP_RENDER_
