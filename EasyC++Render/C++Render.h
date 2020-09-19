@@ -1089,7 +1089,7 @@ public:
 		return true;
 	}
 
-	// 双线性插值
+	// Bilinear Interpolation
 	inline uint32_t SampleBilinear(float x, float y) const {
 		int32_t fx = (int32_t)(x * 0x10000);
 		int32_t fy = (int32_t)(y * 0x10000);
@@ -1107,23 +1107,23 @@ public:
 		return BilinearInterp(c00, c01, c10, c11, dx, dy);
 	}
 
-	// 纹理采样
+	// texture mapping
 	inline Vec4f Sample2D(float u, float v) const {
 		uint32_t rgba = SampleBilinear(u * _w + 0.5f, v * _h + 0.5f);
 		return vector_from_color(rgba);
 	}
 
-	// 纹理采样：直接传入 Vec2f
+	// get texture
 	inline Vec4f Sample2D(const Vec2f& uv) const {
 		return Sample2D(uv.x, uv.y);
 	}
 
-	// 按照 Vec4f 画点
+	// draw point
 	inline void SetPixel(int x, int y, const Vec4f& color) {
 		SetPixel(x, y, vector_to_color(color));
 	}
 
-	// 上下反转
+	//flip
 	inline void FlipVertical() {
 		uint8_t *buffer = new uint8_t[_pitch];
 		for (int i = 0, j = _h - 1; i < j; i++, j--) {
@@ -1134,7 +1134,6 @@ public:
 		delete[]buffer;
 	}
 
-	// 水平反转
 	inline void FlipHorizontal() {
 		for (int y = 0; y < _h; y++) {
 			for (int i = 0, j = _w - 1; i < j; i++, j--) {
@@ -1148,7 +1147,7 @@ public:
 
 protected:
 
-	// 双线性插值计算：给出四个点的颜色，以及坐标偏移，计算结果
+	// calculation
 	inline static uint32_t BilinearInterp(uint32_t tl, uint32_t tr,
 		uint32_t bl, uint32_t br, int32_t distx, int32_t disty) {
 		uint32_t f, r;
