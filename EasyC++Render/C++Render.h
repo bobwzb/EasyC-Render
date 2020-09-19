@@ -1077,7 +1077,6 @@ public:
 		info.biClrUsed = 0;
 		info.biClrImportant = 0;
 		fwrite(&info, sizeof(info), 1, fp);
-		// printf("pitch=%d %d\n", (int)pitch, info.biSizeImage);
 		for (int y = 0; y < GetH(); y++) {
 			const uint8_t *line = GetLine(info.biHeight - 1 - y);
 			uint32_t padding = pitch - GetW() * pixelsize;
