@@ -300,40 +300,6 @@ inline Vector<N, T>& operator /= (Vector<N, T>& a, T x) {
 	return a;
 }
 
-template<size_t N1, size_t N2, typename T>
-inline Vector<N1, T> vector_convert(const Vector<N2, T>& a, T fill = 1) {
-	Vector<N1, T> b;
-	for (size_t i = 0; i < N1; i++)
-		b[i] = (i < N2) ? a[i] : fill;
-	return b;
-}
-
-// = |a| ^ 2
-template<size_t N, typename T>
-inline T vector_length_square(const Vector<N, T>& a) {
-	T sum = 0;
-	for (size_t i = 0; i < N; i++) sum += a[i] * a[i];
-	return sum;
-}
-
-// = |a|
-template<size_t N, typename T>
-inline T vector_length(const Vector<N, T>& a) {
-	return sqrt(vector_length_square(a));
-}
-
-// = |a|,specialize for float
-template<size_t N>
-inline float vector_length(const Vector<N, float>& a) {
-	return sqrtf(vector_length_square(a));
-}
-
-// = a / |a|
-template<size_t N, typename T>
-inline Vector<N, T> vector_normalize(const Vector<N, T>& a) {
-	return a / vector_length(a);
-}
-
 //transfer to different dimension
 template<size_t N1, size_t N2, typename T>
 inline Vector<N1, T> vector_convert(const Vector<N2, T>& a, T fill = 1) {
@@ -1028,7 +994,8 @@ public:
 
 	// read image
 	inline static Bitmap* LoadFile(const char *filename) {
-		FILE *fp = fopen(filename, "rb");
+		FILE *fp;
+		fopen_s(&fp,filename, "rb");
 		if (fp == NULL) return NULL;
 		BITMAPINFOHEADER info;
 		uint8_t header[14];
@@ -1058,7 +1025,8 @@ public:
 
 	// save file
 	inline bool SaveFile(const char *filename, bool withAlpha = false) const {
-		FILE *fp = fopen(filename, "wb");
+		FILE *fp;
+		fopen_s(&fp, filename, "wb");
 		if (fp == NULL) return false;
 		BITMAPINFOHEADER info;
 		uint32_t pixelsize = (withAlpha) ? 4 : 3;
