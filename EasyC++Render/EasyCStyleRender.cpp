@@ -617,23 +617,18 @@ void device_draw_primitive(device *device,  vertex *v1,
 	point p1, p2, p3, c1, c2, c3;
 	int render_state = device->render_state;
 
-	// 按照 Transform 变化
 	transform_apply(&device->transform, &c1, &v1->pos);
 	transform_apply(&device->transform, &c2, &v2->pos);
 	transform_apply(&device->transform, &c3, &v3->pos);
 
-	// 裁剪，注意此处可以完善为具体判断几个点在 cvv内以及同cvv相交平面的坐标比例
-	// 进行进一步精细裁剪，将一个分解为几个完全处在 cvv内的三角形
 	if (transform_check_cvv(&c1) != 0) return;
 	if (transform_check_cvv(&c2) != 0) return;
 	if (transform_check_cvv(&c3) != 0) return;
 
-	// 归一化
 	transform_homogenize(&device->transform, &p1, &c1);
 	transform_homogenize(&device->transform, &p2, &c2);
 	transform_homogenize(&device->transform, &p3, &c3);
 
-	// 纹理或者色彩绘制
 	if (render_state & (RENDER_STATE_TEXTURE | RENDER_STATE_COLOR)) {
 		vertex t1 = *v1, t2 = *v2, t3 = *v3;
 		trapezoid traps[2];
