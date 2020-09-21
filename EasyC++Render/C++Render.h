@@ -1180,7 +1180,7 @@ public:
 	inline Render(int width, int height) {
 		_frame_buffer = NULL;
 		_depth_buffer = NULL;
-		_render_frame = false;
+		_render_frame =true;
 		_render_pixel = true;
 		Init(width, height);
 	}
@@ -1280,7 +1280,7 @@ public:
 		if (_frame_buffer == NULL || _vertex_shader == NULL)
 			return false;
 
-		// innitialize vertex
+		// initialize vertex
 		for (int k = 0; k < 3; k++) {
 			Vertex& vertex = _vertex[k];
 
