@@ -49,7 +49,6 @@ template<size_t N, typename T> struct Vector {
 			ptr[i] = m[i]; 
 	}
 };
-
 //specialize 2D vector
 template <typename T> struct Vector<2, T> {
 	union {
@@ -103,24 +102,30 @@ template <typename T> struct Vector<3, T> {
 		assert(i < 3, "Out of bound");
 		return m[i]; 
 	}
+
 	inline T& operator[] (size_t i) { 
 		assert(i < 3, "Out of bound");
 	    return m[i];
 	}
+
 	inline void load(const T *ptr) { 
 		for (size_t i = 0; i < 3; i++) 
 			m[i] = ptr[i]; 
 	}
+
 	inline void save(T *ptr) { 
 		for (size_t i = 0; i < 3; i++) 
 			ptr[i] = m[i]; 
 	}
+
 	inline Vector<2, T> xy() const { 
 		return Vector<2, T>(x, y); 
 	}
+
 	inline Vector<3, T> xyz() const { 
 		return *this; 
 	}
+
 	inline Vector<4, T> xyz1() const { 
 		return Vector<4, T>(x, y, z, 1); 
 	}
@@ -1091,15 +1096,16 @@ public:
 
 	// Bilinear Interpolation
 	inline uint32_t SampleBilinear(float x, float y) const {
-		int32_t fx = (int32_t)(x * 0x10000);
+		int32_t fx = (int32_t)(x * 0x10000);//0x10000,use int to siumlate float
 		int32_t fy = (int32_t)(y * 0x10000);
 		int32_t x1 = Between(0, _w - 1, fx >> 16);
 		int32_t y1 = Between(0, _h - 1, fy >> 16);
 		int32_t x2 = Between(0, _w - 1, x1 + 1);
 		int32_t y2 = Between(0, _h - 1, y1 + 1);
-		int32_t dx = (fx >> 8) & 0xff;
+		int32_t dx = (fx >> 8) & 0xff;//get distance
 		int32_t dy = (fy >> 8) & 0xff;
 		if (_w <= 0 || _h <= 0) return 0;
+		//get color information store in four different points
 		uint32_t c00 = GetPixel(x1, y1);
 		uint32_t c01 = GetPixel(x2, y1);
 		uint32_t c10 = GetPixel(x1, y2);
@@ -1177,4 +1183,367 @@ protected:
 	uint8_t *_bits;
 };
 
+// set by vertex shader, then pass to pixel shader
+struct ShaderContext {
+	std::map<int, float> varying_float;    // float list
+	std::map<int, Vec2f> varying_vec2f;    // Vector2 list
+	std::map<int, Vec3f> varying_vec3f;    // Vector3 list
+	std::map<int, Vec4f> varying_vec4f;    // Vector4 list
+};
+
+// define shader
+typedef std::function<Vec4f(int index, ShaderContext &output)> VertexShader;
+
+typedef std::function<Vec4f(ShaderContext &input)> PixelShader;
+
+class Render
+{
+public:
+
+	inline virtual ~Render() { Reset(); }
+
+	inline Render() {
+		_frame_buffer = NULL;
+		_depth_buffer = NULL;
+		_render_frame = false;
+		_render_pixel = true;
+	}
+
+	inline Render(int width, int height) {
+		_frame_buffer = NULL;
+		_depth_buffer = NULL;
+		_render_frame = false;
+		_render_pixel = true;
+		Init(width, height);
+	}
+
+public:
+
+	// reset the status
+	inline void Reset() {
+		_vertex_shader = NULL;
+		_pixel_shader = NULL;
+		if (_frame_buffer) delete _frame_buffer;
+		_frame_buffer = NULL;
+		if (_depth_buffer) {
+			for (int j = 0; j < _fb_height; j++) {
+				if (_depth_buffer[j]) delete[]_depth_buffer[j];
+				_depth_buffer[j] = NULL;
+			}
+			delete[]_depth_buffer;
+			_depth_buffer = NULL;
+		}
+		_color_fg = 0xffffffff;
+		_color_bg = 0xff191970;
+	}
+
+	// innitialize fame buffer
+	inline void Init(int width, int height) {
+		Reset();
+		_frame_buffer = new Bitmap(width, height);
+		_fb_width = width;
+		_fb_height = height;
+		_depth_buffer = new float*[height];
+		for (int j = 0; j < height; j++) {
+			_depth_buffer[j] = new float[width];
+		}
+		Clear();
+	}
+
+	//clear frame buffer and depth buffer
+	inline void Clear() {
+		if (_frame_buffer) {
+			_frame_buffer->Fill(_color_bg);
+		}
+		if (_depth_buffer) {
+			for (int j = 0; j < _fb_height; j++) {
+				for (int i = 0; i < _fb_width; i++)
+					_depth_buffer[j][i] = 0.0f;
+			}
+		}
+	}
+
+	// set the vertex and pixel shader
+	inline void SetVertexShader(VertexShader vs) { _vertex_shader = vs; }
+
+	inline void SetPixelShader(PixelShader ps) { _pixel_shader = ps; }
+
+	// save frame buffer with bmp image
+	inline void SaveFile(const char *filename) { 
+		if (_frame_buffer) 
+			_frame_buffer->SaveFile(filename); 
+	}
+
+	// set the color if frontground and background
+	inline void SetBGColor(uint32_t color) { _color_bg = color; }
+
+	inline void SetFGColor(uint32_t color) { _color_fg = color; }
+
+	// draw point in frame buffer
+	inline void SetPixel(int x, int y, uint32_t cc) { 
+		if (_frame_buffer) 
+			_frame_buffer->SetPixel(x, y, cc); 
+	}
+
+	inline void SetPixel(int x, int y, const Vec4f& cc) { SetPixel(x, y, vector_to_color(cc)); }
+
+	inline void SetPixel(int x, int y, const Vec3f& cc) { SetPixel(x, y, vector_to_color(cc)); }
+
+	// draw line in frame buffer
+	inline void DrawLine(int x1, int y1, int x2, int y2) {
+		if (_frame_buffer) _frame_buffer->DrawLine(x1, y1, x2, y2, _color_fg);
+	}
+
+	// whether darw the frame and triangle
+	inline void SetRenderState(bool frame, bool pixel) {
+		_render_frame = frame;
+		_render_pixel = pixel;
+	}
+
+	// check whether a line is on the top left of the triangle
+	inline bool IsTopLeft(const Vec2i& a, const Vec2i& b) {
+		return ((a.y == b.y) && (a.x < b.x)) || (a.y > b.y);
+	}
+
+public:
+
+	// draw triangle, before this step we must innitialize the render
+	inline bool DrawPrimitive() {
+		if (_frame_buffer == NULL || _vertex_shader == NULL)
+			return false;
+
+		// innitialize vertex
+		for (int k = 0; k < 3; k++) {
+			Vertex& vertex = _vertex[k];
+
+			// clear data in vertex shader
+			vertex.context.varying_float.clear();
+			vertex.context.varying_vec2f.clear();
+			vertex.context.varying_vec3f.clear();
+			vertex.context.varying_vec4f.clear();
+
+			// run vertex shader, return the pos
+			vertex.pos = _vertex_shader(k, vertex.context);
+
+			// projection, if one vertex if outside the CVV, then remove it
+			float w = vertex.pos.w;
+
+			if (w == 0.0f) return false;
+			if (vertex.pos.z < 0.0f || vertex.pos.z > w) return false;
+			if (vertex.pos.x < -w || vertex.pos.x > w) return false;
+			if (vertex.pos.y < -w || vertex.pos.y > w) return false;
+
+			// reciprocal of the homogeneous W 
+			vertex.rhw = 1.0f / w;
+
+			// transfer the pos into CVV
+			vertex.pos *= vertex.rhw;
+
+			// calculate screen position
+			vertex.spf.x = (vertex.pos.x + 1.0f) * _fb_width * 0.5f;
+			vertex.spf.y = (1.0f - vertex.pos.y) * _fb_height * 0.5f;
+
+			// transfer the sreen position to int
+			vertex.spi.x = (int)(vertex.spf.x + 0.5f);
+			vertex.spi.y = (int)(vertex.spf.y + 0.5f);
+
+			// update the range of rectangle, because we use edge equation here
+			if (k == 0) {
+				_min_x = _max_x = Between(0, _fb_width - 1, vertex.spi.x);
+				_min_y = _max_y = Between(0, _fb_height - 1, vertex.spi.y);
+			}
+			else {
+				_min_x = Between(0, _fb_width - 1, Min(_min_x, vertex.spi.x));
+				_max_x = Between(0, _fb_width - 1, Max(_max_x, vertex.spi.x));
+				_min_y = Between(0, _fb_height - 1, Min(_min_y, vertex.spi.y));
+				_max_y = Between(0, _fb_height - 1, Max(_max_y, vertex.spi.y));
+			}
+		}
+
+		// draw the frame
+		if (_render_frame) {
+			DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
+			DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[2].spi.x, _vertex[2].spi.y);
+			DrawLine(_vertex[2].spi.x, _vertex[2].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
+		}
+
+		// if not draw pixel then exit
+		if (_render_pixel == false) return false;
+
+		// get the direction of rectangle
+		Vec4f v01 = _vertex[1].pos - _vertex[0].pos;
+		Vec4f v02 = _vertex[2].pos - _vertex[0].pos;
+		Vec4f normal = vector_cross(v01, v02);
+
+		// create a vtx to access to the points, because we might change the order by the direction
+		Vertex *vtx[3] = { &_vertex[0], &_vertex[1], &_vertex[2] };
+
+		// if face back to the view point, then change the order
+		if (normal.z > 0.0f) {
+			vtx[1] = &_vertex[2];
+			vtx[2] = &_vertex[1];
+		}
+		else if (normal.z == 0.0f) {
+			return false;
+		}
+
+		// save the position of points
+		Vec2i p0 = vtx[0]->spi;
+		Vec2i p1 = vtx[1]->spi;
+		Vec2i p2 = vtx[2]->spi;
+
+		// use 2D cross product to calculate the area
+		float s = Abs(vector_cross(p1 - p0, p2 - p0));
+		if (s <= 0) return false;
+
+		// only draw the top left points
+		bool TopLeft01 = IsTopLeft(p0, p1);
+		bool TopLeft12 = IsTopLeft(p1, p2);
+		bool TopLeft20 = IsTopLeft(p2, p0);
+
+		// use edge equation to darw, travers all the points of the rectangle
+		for (int cy = _min_y; cy <= _max_y; cy++) {
+			for (int cx = _min_x; cx <= _max_x; cx++) {
+				Vec2f px = { (float)cx + 0.5f, (float)cy + 0.5f };
+
+				// Edge Equation
+				// because we use left-hand here, so need to change to negative
+				int E01 = -(cx - p0.x) * (p1.y - p0.y) + (cy - p0.y) * (p1.x - p0.x);
+				int E12 = -(cx - p1.x) * (p2.y - p1.y) + (cy - p1.y) * (p2.x - p1.x);
+				int E20 = -(cx - p2.x) * (p0.y - p2.y) + (cy - p2.y) * (p0.x - p2.x);
+
+				// if E<0, which means that it is in the bottom-right, then we need to skip it
+				if (E01 < (TopLeft01 ? 0 : 1)) continue;   
+				if (E12 < (TopLeft12 ? 0 : 1)) continue;   
+				if (E20 < (TopLeft20 ? 0 : 1)) continue;   
+
+				// vector from triangle points to current point
+				Vec2f s0 = vtx[0]->spf - px;
+				Vec2f s1 = vtx[1]->spf - px;
+				Vec2f s2 = vtx[2]->spf - px;
+
+				// calculate the center of gravity
+				float a = Abs(vector_cross(s1, s2));   
+				float b = Abs(vector_cross(s2, s0));    
+				float c = Abs(vector_cross(s0, s1));    
+				float s = a + b + c;                    
+
+				if (s == 0.0f) continue;
+
+				// normalize, use as coeffcient
+				a = a * (1.0f / s);
+				b = b * (1.0f / s);
+				c = c * (1.0f / s);
+
+				//calculate the w of the current point, use linear interpolation
+				float rhw = vtx[0]->rhw * a + vtx[1]->rhw * b + vtx[2]->rhw * c;
+
+				// depth test
+				if (rhw < _depth_buffer[cy][cx]) continue;
+				_depth_buffer[cy][cx] = rhw;   //store to depth buffer
+
+				// get w from rhw
+				float w = 1.0f / ((rhw != 0.0f) ? rhw : 1.0f);
+
+				//calculate the coeffcient of varying
+				//first divided by w of the vertex,then multiply by current w
+				float c0 = vtx[0]->rhw * a * w;
+				float c1 = vtx[1]->rhw * b * w;
+				float c2 = vtx[2]->rhw * c * w;
+
+				//interpolate for the property of current pixel
+				ShaderContext input;
+
+				ShaderContext& i0 = vtx[0]->context;
+				ShaderContext& i1 = vtx[1]->context;
+				ShaderContext& i2 = vtx[2]->context;
+
+				
+				for (auto const &it : i0.varying_float) {
+					int key = it.first;
+					float f0 = i0.varying_float[key];
+					float f1 = i1.varying_float[key];
+					float f2 = i2.varying_float[key];
+					input.varying_float[key] = c0 * f0 + c1 * f1 + c2 * f2;
+				}
+
+				for (auto const &it : i0.varying_vec2f) {
+					int key = it.first;
+					const Vec2f& f0 = i0.varying_vec2f[key];
+					const Vec2f& f1 = i1.varying_vec2f[key];
+					const Vec2f& f2 = i2.varying_vec2f[key];
+					input.varying_vec2f[key] = c0 * f0 + c1 * f1 + c2 * f2;
+				}
+
+				for (auto const &it : i0.varying_vec3f) {
+					int key = it.first;
+					const Vec3f& f0 = i0.varying_vec3f[key];
+					const Vec3f& f1 = i1.varying_vec3f[key];
+					const Vec3f& f2 = i2.varying_vec3f[key];
+					input.varying_vec3f[key] = c0 * f0 + c1 * f1 + c2 * f2;
+				}
+
+				for (auto const &it : i0.varying_vec4f) {
+					int key = it.first;
+					const Vec4f& f0 = i0.varying_vec4f[key];
+					const Vec4f& f1 = i1.varying_vec4f[key];
+					const Vec4f& f2 = i2.varying_vec4f[key];
+					input.varying_vec4f[key] = c0 * f0 + c1 * f1 + c2 * f2;
+				}
+
+				// run pixel shader
+				Vec4f color = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+				if (_pixel_shader != NULL) {
+					color = _pixel_shader(input);
+				}
+
+				//draw to frame buffer
+				_frame_buffer->SetPixel(cx, cy, color);
+			}
+		}
+
+		// draw the frame again to avoid cover
+		if (_render_frame) {
+			DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
+			DrawLine(_vertex[0].spi.x, _vertex[0].spi.y, _vertex[2].spi.x, _vertex[2].spi.y);
+			DrawLine(_vertex[2].spi.x, _vertex[2].spi.y, _vertex[1].spi.x, _vertex[1].spi.y);
+		}
+
+		return true;
+	}
+
+protected:
+
+	// vertex struct
+	struct Vertex {
+		ShaderContext context;    
+		float rhw;                
+		Vec4f pos;                
+		Vec2f spf;                // screen pos
+		Vec2i spi;                
+	};
+
+protected:
+	Bitmap *_frame_buffer;    
+	float **_depth_buffer;    
+
+	int _fb_width;            // frame buffer width
+	int _fb_height;           // frame buffer height
+	uint32_t _color_fg;       // frontground color, use to draw line
+	uint32_t _color_bg;       // background color, use to clear
+
+	Vertex _vertex[3];        // points of triangle
+
+	int _min_x;               // rectangle outside the triangle
+	int _min_y;
+	int _max_x;
+	int _max_y;
+
+	bool _render_frame;       // whether draw frame
+	bool _render_pixel;       // whether draw pixel
+
+	VertexShader _vertex_shader;
+	PixelShader _pixel_shader;
+};
 #endif // !_CPP_RENDER_
