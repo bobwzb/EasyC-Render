@@ -29,15 +29,6 @@ int main(void)
 		{ {-1, -1, -1, 1}, {0, 1} },
 	};
 
-	vs_input[0] = vertex[0];
-	vs_input[1] = vertex[1];
-	vs_input[2] = vertex[2];
-	rh.DrawPrimitive();
-
-	vs_input[0] = vertex[2];
-	vs_input[1] = vertex[3];
-	vs_input[2] = vertex[0];
-
 	const int VARYING_TEX = 0;
 
 	rh.SetVertexShader([&](int index, ShaderContext& output) {
@@ -50,9 +41,15 @@ int main(void)
 		Vec2f coord = input.varying_vec2f[VARYING_TEX];
 		return texture.Sample2D(coord);		
 	});
-
-	// render && save
+	vs_input[0] = vertex[0];
+	vs_input[1] = vertex[1];
+	vs_input[2] = vertex[2];
 	rh.DrawPrimitive();
+	vs_input[0] = vertex[2];
+	vs_input[1] = vertex[3];
+	vs_input[2] = vertex[0];
+	rh.DrawPrimitive();
+	// render && save
 	rh.SaveFile("output2.bmp");
 
 	// if use windows, use mspaint to draw the result
