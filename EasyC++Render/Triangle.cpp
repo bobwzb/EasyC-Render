@@ -9,9 +9,9 @@ int main(void)
 
 	// vertex data,color and position of a triangle
 	struct { Vec4f pos; Vec4f color; } vs_input[3] = {
-		{ {  0.0,  0.7, 0.90, 1}, {1, 0, 0, 1} },
-		{ { -0.6, -0.2, 0.01, 1}, {0, 1, 0, 1} },
-		{ { +0.6, -0.2, 0.01, 1}, {0, 0, 1, 1} },
+		{ {  0.0,  0.7, 0.90, 1}, {0.75, 0.5, 0, 1} },
+		{ { -0.5, -0.2, 0.01, 1}, {0, 0.75, 0.5, 1} },
+		{ { +0.5, -0.2, 0.01, 1}, {0.5, 0, 0.75, 1} },
 	};
 
 	// vertex shader, transfer and return the position
