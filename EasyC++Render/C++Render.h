@@ -1180,7 +1180,7 @@ public:
 	inline Render(int width, int height) {
 		_frame_buffer = NULL;
 		_depth_buffer = NULL;
-		_render_frame =true;
+		_render_frame =false;
 		_render_pixel = true;
 		Init(width, height);
 	}
@@ -1355,7 +1355,7 @@ public:
 			return false;
 		}
 
-		// save the position of points
+		// save the sreen position of points
 		Vec2i p0 = vtx[0]->spi;
 		Vec2i p1 = vtx[1]->spi;
 		Vec2i p2 = vtx[2]->spi;
@@ -1494,7 +1494,7 @@ protected:
 
 protected:
 	Bitmap *_frame_buffer;    
-	float **_depth_buffer;    
+	float **_depth_buffer;   //w-buffer 
 
 	int _fb_width;            // frame buffer width
 	int _fb_height;           // frame buffer height
