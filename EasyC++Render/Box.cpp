@@ -52,7 +52,7 @@ int main(void)
 
 	Mat4x4f mat_model = matrix_set_rotate(-1, -0.5, 1, 1);
 	Mat4x4f mat_proj = matrix_set_perspective(3.1415926f / 2, 8 / 6.0, 2.0, 500.0);
-	Mat4x4f mat_view = matrix_set_lookat({ -0.7,0,1.5 }, { 0,0,0 }, { 0,0,1 });
+	Mat4x4f mat_view = matrix_set_lookat({ 3.5,0,0 }, { 0,0,0 }, { 0,0,1 });
 	Mat4x4f mat_mvp = mat_model * mat_view*mat_proj;
 
 	rh.SetVertexShader([&](int index, ShaderContext& output) -> Vec4f {
