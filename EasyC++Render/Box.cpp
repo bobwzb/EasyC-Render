@@ -4,7 +4,21 @@
 
 struct VertexInput { Vec3f pos; Vec2f uv; Vec3f color; };
 
-void draw_plane(Render& rh, int a, int b, int c, int d, VertexInput mesh[], VertexInput vs_input[]) {
+VertexInput vs_input[3];
+
+//model data of the box
+VertexInput mesh[] = {
+	{ {  1, -1,  1, }, { 0, 0 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1, -1,  1, }, { 0, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1,  1,  1, }, { 1, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ {  1,  1,  1, }, { 1, 0 }, { 0.0f, 0.0f, 0.0f }, },
+	{ {  1, -1, -1, }, { 0, 0 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1, -1, -1, }, { 0, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1,  1, -1, }, { 1, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ {  1,  1, -1, }, { 1, 0 }, { 0.0f, 0.0f, 0.0f }, },
+};
+
+void draw_plane(Render& rh, int a, int b, int c, int d, VertexInput mesh[]) {
 	mesh[a].uv.x = 0, mesh[a].uv.y = 0, mesh[b].uv.x = 0, mesh[b].uv.y = 1;
 	mesh[c].uv.x = 1, mesh[c].uv.y = 1, mesh[d].uv.x = 1, mesh[d].uv.y = 0;
 
@@ -27,20 +41,6 @@ int main(void)
 	const int VARYING_TEX = 0;
 	const int VARYING_COLOR = 1;
 
-	VertexInput vs_input[3];
-
-	//model data of the box
-	VertexInput mesh[] = {
-		{ {  1, -1,  1, }, { 0, 0 }, { 1.0f, 0.2f, 0.2f }, },
-		{ { -1, -1,  1, }, { 0, 1 }, { 0.2f, 1.0f, 0.2f }, },
-		{ { -1,  1,  1, }, { 1, 1 }, { 0.2f, 0.2f, 1.0f }, },
-		{ {  1,  1,  1, }, { 1, 0 }, { 1.0f, 0.2f, 1.0f }, },
-		{ {  1, -1, -1, }, { 0, 0 }, { 1.0f, 1.0f, 0.2f }, },
-		{ { -1, -1, -1, }, { 0, 1 }, { 0.2f, 1.0f, 1.0f }, },
-		{ { -1,  1, -1, }, { 1, 1 }, { 1.0f, 0.3f, 0.3f }, },
-		{ {  1,  1, -1, }, { 1, 0 }, { 0.2f, 1.0f, 0.3f }, },
-	};
-
 	//texture
 	Bitmap texture(256, 256);
 	for (int y = 0; y < 256; y++) {
@@ -50,7 +50,7 @@ int main(void)
 		}
 	}
 
-	Mat4x4f mat_model = matrix_set_rotate(-1, -0.5, 1, 1);
+	Mat4x4f mat_model = matrix_set_rotate(1, -0.5, 1, 1);
 	Mat4x4f mat_proj = matrix_set_perspective(3.1415926f / 2, 8 / 6.0, 2.0, 500.0);
 	Mat4x4f mat_view = matrix_set_lookat({ 3.5,0,0 }, { 0,0,0 }, { 0,0,1 });
 	Mat4x4f mat_mvp = mat_model * mat_view*mat_proj;
@@ -69,12 +69,12 @@ int main(void)
 	});
 
 	// render && save
-	draw_plane(rh, 0, 1, 2, 3,mesh,vs_input);
-	draw_plane(rh, 7, 6, 5, 4, mesh, vs_input);
-	draw_plane(rh, 0, 4, 5, 1, mesh, vs_input);
-	draw_plane(rh, 1, 5, 6, 2, mesh, vs_input);
-	draw_plane(rh, 2, 6, 7, 3, mesh, vs_input);
-	draw_plane(rh, 3, 7, 4, 0, mesh, vs_input);
+	draw_plane(rh, 0, 1, 2, 3, mesh);
+	draw_plane(rh, 7, 6, 5, 4, mesh);
+	draw_plane(rh, 0, 4, 5, 1, mesh);
+	draw_plane(rh, 1, 5, 6, 2, mesh);
+	draw_plane(rh, 2, 6, 7, 3, mesh);
+	draw_plane(rh, 3, 7, 4, 0, mesh);
 	rh.SaveFile("box.bmp");
 
 	// if use windows, use mspaint to draw the result
