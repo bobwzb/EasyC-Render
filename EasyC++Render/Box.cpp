@@ -2,7 +2,7 @@
 #include "C++Render.h"
 #include <iostream>
 
-struct VertexInput { Vec3f pos; Vec2f uv; Vec3f color; };
+/*struct VertexInput { Vec3f pos; Vec2f uv; Vec3f color; };
 
 VertexInput vs_input[3];
 
@@ -46,7 +46,7 @@ int main(void)
 	for (int y = 0; y < 256; y++) {
 		for (int x = 0; x < 256; x++) {
 			int k = (x / 32 + y / 32) & 1;
-			texture.SetPixel(x, y, k ? 0xffffffff : 0xff3fbcef);
+			texture.SetPixel(x, y, k ? 0xffffffff : 0xbf4fbc2f);
 		}
 	}
 
@@ -83,4 +83,4 @@ int main(void)
 #endif
 
 	return 0;
-}
+}*/

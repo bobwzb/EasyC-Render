@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "C++Render.h"
-int main(void)
+/*int main(void)
 {
 	// Initialize the render
 	Render rh(800, 600);
@@ -35,4 +35,4 @@ int main(void)
 #endif
 
 	return 0;
-}
+}*/

@@ -10,7 +10,7 @@
 	for (int x = 0; x < 256; x++) {
 		for (int y = 0; y < 256; y++) {
 			int k = (x / 32 + y / 32) & 1;
-			texture.SetPixel(y, x, k ? 0xffffffff : 0xff3fbcef);
+			texture.SetPixel(y, x, k ? 0xffffffff : 0xbf4fbc2f);
 		}
 	}
 

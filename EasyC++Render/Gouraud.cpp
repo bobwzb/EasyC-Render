@@ -12,14 +12,14 @@ struct VertexInput
 VertexInput vs_input[3];
 
 VertexInput mesh[] = {
-	{ {  1, -1,  1, }, { 0, 0 }, { 1.0f, 0.2f, 0.2f }, },
-	{ { -1, -1,  1, }, { 0, 1 }, { 0.2f, 1.0f, 0.2f }, },
-	{ { -1,  1,  1, }, { 1, 1 }, { 0.2f, 0.2f, 1.0f }, },
-	{ {  1,  1,  1, }, { 1, 0 }, { 1.0f, 0.2f, 1.0f }, },
-	{ {  1, -1, -1, }, { 0, 0 }, { 1.0f, 1.0f, 0.2f }, },
-	{ { -1, -1, -1, }, { 0, 1 }, { 0.2f, 1.0f, 1.0f }, },
-	{ { -1,  1, -1, }, { 1, 1 }, { 1.0f, 0.3f, 0.3f }, },
-	{ {  1,  1, -1, }, { 1, 0 }, { 0.2f, 1.0f, 0.3f }, },
+	{ {  1, -1,  1, }, { 0, 0 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1, -1,  1, }, { 0, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1,  1,  1, }, { 1, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ {  1,  1,  1, }, { 1, 0 }, { 0.0f, 0.0f, 0.0f }, },
+	{ {  1, -1, -1, }, { 0, 0 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1, -1, -1, }, { 0, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ { -1,  1, -1, }, { 1, 1 }, { 0.0f, 0.0f, 0.0f }, },
+	{ {  1,  1, -1, }, { 1, 0 }, { 0.0f, 0.0f, 0.0f }, },
 };
 
 void draw_plane(Render& rh, int a, int b, int c, int d)
@@ -56,55 +56,45 @@ int main(void)
 	const int VARYING_COLOR = 1;
 	const int VARYING_LIGHT = 2;
 
-	// 定义一个纹理，并生成网格图案
 	Bitmap texture(256, 256);
 	for (int y = 0; y < 256; y++) {
 		for (int x = 0; x < 256; x++) {
 			int k = (x / 32 + y / 32) & 1;
-			texture.SetPixel(x, y, k ? 0xffffffff : 0xff3fbcef);
+			texture.SetPixel(x, y, k ? 0xffffffff : 0xbf4fbc2f);
 		}
 	}
 
-	// 定义变换矩阵：模型变换，摄像机变换，透视变换
-	Mat4x4f mat_model = matrix_set_rotate(-1, -0.5, 1, 1);	// 模型变换，旋转一定角度
-	Mat4x4f mat_view = matrix_set_lookat({ 3.5, 0, 0 }, { 0,0,0 }, { 0,0,1 });	// 摄像机方位
-	Mat4x4f mat_proj = matrix_set_perspective(3.1415926f * 0.5f, 800 / 600.0, 1.0, 500.0f);
-	Mat4x4f mat_mvp = mat_model * mat_view * mat_proj;	// 综合变换矩阵
+	Mat4x4f mat_model = matrix_set_rotate(-1, -0.5, 1, 1);	
+	Mat4x4f mat_view = matrix_set_lookat({ 3.5, 0, 0 }, { 0,0,0 }, { 0,0,1 });
+	Mat4x4f mat_proj = matrix_set_perspective(3.1415926f * 0.5f, 8 / 6.0, 1.0, 400.0f);
+	Mat4x4f mat_mvp = mat_model * mat_view * mat_proj;	
 
-	// model 矩阵求逆转置，用于将法向从模型坐标变换到世界坐标
-	// 法向不能直接乘以 model 矩阵，应为该矩阵包含位移，证明网上有
+	// invert the model matrix, use to transfer the normal to word space
 	Mat4x4f mat_model_it = matrix_invert(mat_model).Transpose();
 
-	// 光照方向
-	Vec3f light_dir = { 1, 0, 2 };
+	// define a light direction
+	Vec3f light_dir = { 1, 0, 1 };
 
-	// 顶点着色器
 	rh.SetVertexShader([&](int index, ShaderContext& output) -> Vec4f {
-		// 扩充成四维矢量并变换
 		Vec4f pos = vs_input[index].pos.xyz1() * mat_mvp;
 		output.varying_vec2f[VARYING_TEXUV] = vs_input[index].uv;
 		output.varying_vec4f[VARYING_COLOR] = vs_input[index].color.xyz1();
-		// 法向需要经过 model 矩阵的逆矩阵转置的矩阵变换，从模型坐标系转换
-		// 到世界坐标系，光照需要在世界坐标系内进行运算
 		Vec3f normal = vs_input[index].normal;
 		normal = (normal.xyz1() * mat_model_it).xyz();
-		// 计算光照强度
 		float intense = vector_dot(normal, vector_normalize(light_dir));
-		// 避免越界同时加入一个常量环境光 0.1
+		// add 0.1 to avoid darkness
 		intense = Max(0.0f, intense) + 0.1;
 		output.varying_float[VARYING_LIGHT] = Min(1.0f, intense);
 		return pos;
 	});
 
-	// 像素着色器
 	rh.SetPixelShader([&](ShaderContext& input) -> Vec4f {
-		Vec2f coord = input.varying_vec2f[VARYING_TEXUV];	// 取得纹理坐标
-		Vec4f tc = texture.Sample2D(coord);		// 纹理采样并返回像素颜色
+		Vec2f coord = input.varying_vec2f[VARYING_TEXUV];	
+		Vec4f tc = texture.Sample2D(coord);		
 		float light = input.varying_float[VARYING_LIGHT];
 		return tc * light;
 	});
 
-	// 绘制盒子
 	draw_plane(rh, 0, 1, 2, 3);
 	draw_plane(rh, 7, 6, 5, 4);
 	draw_plane(rh, 0, 4, 5, 1);
@@ -112,10 +102,8 @@ int main(void)
 	draw_plane(rh, 2, 6, 7, 3);
 	draw_plane(rh, 3, 7, 4, 0);
 
-	// 保存结果
 	rh.SaveFile("Gouraud.bmp");
 
-	// 用画板显示图片
 #if defined(_WIN32) || defined(WIN32)
 	system("mspaint.exe Gouraud.bmp");
 #endif
