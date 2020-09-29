@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "C++Render.h"
-
+#include <memory>
+#include <thread>
+using namespace std;
 struct VertexInput
 {
 	Vec3f pos; 
@@ -46,7 +48,14 @@ void draw_plane(Render& rh, int a, int b, int c, int d)
 	vs_input[2] = mesh[a];
 	rh.DrawPrimitive();
 }
-
+void setTexture(Bitmap& texture) {
+	for (int y = 0; y < 256; y++) {
+		for (int x = 0; x < 256; x++) {
+			int k = (x / 32 + y / 32) & 1;
+			texture.SetPixel(x, y, k ? 0xffffffff : 0xbf4fbc2f);
+		}
+	}
+}
 int main(void)
 {
 	Render rh(800, 600);
@@ -57,12 +66,7 @@ int main(void)
 	const int VARYING_LIGHT = 2;
 
 	Bitmap texture(256, 256);
-	for (int y = 0; y < 256; y++) {
-		for (int x = 0; x < 256; x++) {
-			int k = (x / 32 + y / 32) & 1;
-			texture.SetPixel(x, y, k ? 0xffffffff : 0xbf4fbc2f);
-		}
-	}
+	thread t1(setTexture, ref(texture));
 
 	Mat4x4f mat_model = matrix_set_rotate(-1, -0.5, 1, 1);	
 	Mat4x4f mat_view = matrix_set_lookat({ 3.5, 0, 0 }, { 0,0,0 }, { 0,0,1 });
@@ -88,6 +92,7 @@ int main(void)
 		return pos;
 	});
 
+	t1.join();
 	rh.SetPixelShader([&](ShaderContext& input) -> Vec4f {
 		Vec2f coord = input.varying_vec2f[VARYING_TEXUV];	
 		Vec4f tc = texture.Sample2D(coord);		
